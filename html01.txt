@@ -1,0 +1,62 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOKSHAGNA TEJ</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="index.html">
+    <style>
+        body{
+            background-image: url('1.jpg');
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <span class="container">
+            <nav>
+                <h1 class="logo">MOKSHAGNA TEJ</h1>
+                
+                
+            
+            </nav>
+        </span>
+        <div class="menu">
+            
+            <nav>
+                
+                <ul>
+                    <li><a href="index.html">HOME</a></li>
+                    <li><a href="about.html">ABOUT</a></li>
+                    <li><a href="portfolio.html">PORTFOLIO</a></li>
+                    <li><a href="contact.html">CONTACT</a></li>
+                </ul>
+    
+        
+           
+
+            </nav>
+            </ul>
+        </div>
+     </header>
+     <main>
+        <div class="borderfornav">
+             </div>
+
+
+
+
+             
+     </main>
+        <footer>
+
+            
+        </footer>
+            
+</body>
+</html>
