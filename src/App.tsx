@@ -247,6 +247,8 @@ export default function App() {
         {page === "expenses" ? (
           <ExpensesPage
             transactions={transactions}
+            categories={metadata.categories.map(c => c.name)}
+            accounts={metadata.accounts.map(a => a.name)}
             onAdd={addTransaction}
             onDelete={deleteTransaction}
             showToast={showToast}

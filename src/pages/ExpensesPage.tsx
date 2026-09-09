@@ -3,10 +3,12 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { Transaction, TransactionType, CATEGORIES, ACCOUNTS } from "../data/mockData";
+import { Transaction, TransactionType } from "../data/mockData";
 
 interface Props {
   transactions: Transaction[];
+  categories: string[];
+  accounts: string[];
   onAdd: (t: Transaction) => void;
   onDelete: (id: string) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
@@ -58,7 +60,7 @@ function get30DayData(txns: Transaction[]) {
 
 type Filter = "all" | "Income" | "Expense";
 
-export default function ExpensesPage({ transactions, onAdd, onDelete, showToast }: Props) {
+export default function ExpensesPage({ transactions, categories, accounts, onAdd, onDelete, showToast }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [txType, setTxType] = useState<TransactionType>("Expense");
   const [name, setName] = useState("");
@@ -277,11 +279,11 @@ export default function ExpensesPage({ transactions, onAdd, onDelete, showToast 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
                 <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
                   <option value="">Category…</option>
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{CAT_ICON[c]} {c}</option>)}
+                  {categories.map((c) => <option key={c} value={c}>{CAT_ICON[c]} {c}</option>)}
                 </select>
                 <select className="input" value={account} onChange={(e) => setAccount(e.target.value)}>
                   <option value="">Account…</option>
-                  {ACCOUNTS.map((a) => <option key={a} value={a}>{a}</option>)}
+                  {accounts.map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
               <button type="submit" className={`btn ${txType === "Income" ? "btn-success" : "btn-danger"}`} style={{ width: "100%", justifyContent: "center", marginTop: "0.25rem" }}>
