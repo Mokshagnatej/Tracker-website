@@ -42,7 +42,13 @@ export default function App() {
         metaRes.json()
       ]);
       
-      setTransactions(Array.isArray(txns) ? txns : []);
+      const adaptedTxns = Array.isArray(txns) ? txns.map((t: any) => ({
+        ...t,
+        category: meta.categories.find((c: any) => c.id === t.categoryId)?.name || "Other",
+        account: meta.accounts.find((a: any) => a.id === t.accountId)?.name || "Cash",
+      })) : [];
+      
+      setTransactions(adaptedTxns);
       
       // Adapt habits history array to Record<string, boolean>
       const adaptedHabs = habs.map((h: any) => {
@@ -80,7 +86,12 @@ export default function App() {
       });
       if (res.ok) {
         const newTxn = await res.json();
-        setTransactions(prev => [newTxn, ...prev]);
+        const adaptedNewTxn = {
+          ...newTxn,
+          category: metadata.categories.find((c: any) => c.id === newTxn.categoryId)?.name || t.category || "Other",
+          account: metadata.accounts.find((a: any) => a.id === newTxn.accountId)?.name || t.account || "Cash",
+        };
+        setTransactions(prev => [adaptedNewTxn, ...prev]);
         showToast('Expense recorded', 'success');
       } else {
         throw new Error();
