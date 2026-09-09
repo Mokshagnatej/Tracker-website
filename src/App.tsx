@@ -31,13 +31,18 @@ export default function App() {
         fetch('/api/habits'),
         fetch('/api/metadata')
       ]);
+
+      if (!txnRes.ok || !habRes.ok || !metaRes.ok) {
+        throw new Error('One or more APIs failed');
+      }
+
       const [txns, habs, meta] = await Promise.all([
         txnRes.json(),
         habRes.json(),
         metaRes.json()
       ]);
       
-      setTransactions(txns);
+      setTransactions(Array.isArray(txns) ? txns : []);
       
       // Adapt habits history array to Record<string, boolean>
       const adaptedHabs = habs.map((h: any) => {
