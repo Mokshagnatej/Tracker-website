@@ -21,7 +21,11 @@ app.all('/api/habits/:id', (req, res) => {
 });
 app.all('/api/metadata', (req, res) => require('./api/metadata.js')(req, res));
 
-app.use(express.static(path.join(__dirname, '.')));
+app.use(express.static(path.join(__dirname, 'dist')));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
