@@ -6,6 +6,7 @@
     "dev:ui": "vite",
     "dev:api": "node server.js",
     "dev": "concurrently \"npm run dev:ui\" \"npm run dev:api\"",
+    "postinstall": "npm run build",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js"
