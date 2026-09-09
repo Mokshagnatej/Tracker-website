@@ -171,6 +171,20 @@ export default function App() {
     }
   };
 
+  const deleteHabit = async (id: string) => {
+    try {
+      const res = await fetch(`/api/habits/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Habit deleted', 'success');
+        fetchData(); // Reload to get the new schema
+      } else {
+        throw new Error();
+      }
+    } catch (e) {
+      showToast('Failed to delete habit', 'error');
+    }
+  };
+
   const today = new Date();
   const todayHabits = habits.filter((h) => h.history[todayStr()]).length;
   const habitRate = habits.length ? Math.round((todayHabits / habits.length) * 100) : 0;
@@ -229,6 +243,23 @@ export default function App() {
                   <div className="mono font-medium" style={{ fontSize: "0.9rem", color, letterSpacing: "-0.03em" }}>{value}</div>
                 </div>
               ))}
+              <button
+                onClick={fetchData}
+                style={{
+                  background: "var(--surface)",
+                  border: "0.5px solid var(--border)",
+                  borderRadius: "var(--r-xs)",
+                  padding: "0.35rem 0.6rem",
+                  fontSize: "0.75rem",
+                  color: "var(--text-2)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                }}
+              >
+                ⟳ Sync
+              </button>
             </div>
 
             <nav className="flex items-center gap-0.5 p-1 rounded-lg" style={{ background: "var(--surface)", border: "0.5px solid var(--border-2)" }}>
@@ -274,6 +305,7 @@ export default function App() {
             habits={habits}
             onToggle={toggleHabit}
             onAdd={addHabit}
+            onDelete={deleteHabit}
             showToast={showToast}
           />
         )}

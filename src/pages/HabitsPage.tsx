@@ -9,6 +9,7 @@ interface Props {
   habits: Habit[];
   onToggle: (id: string) => void;
   onAdd: (name: string) => void;
+  onDelete: (id: string) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
 }
 
@@ -64,7 +65,7 @@ function Ring({ pct, done, total }: { pct: number; done: number; total: number }
   );
 }
 
-export default function HabitsPage({ habits, onToggle, onAdd, showToast }: Props) {
+export default function HabitsPage({ habits, onToggle, onAdd, onDelete, showToast }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [newName, setNewName] = useState("");
   const today = todayStr();
@@ -311,6 +312,24 @@ export default function HabitsPage({ habits, onToggle, onAdd, showToast }: Props
                     </div>
                     <span className="label" style={{ fontSize: "0.5rem" }}>7d</span>
                   </div>
+                  <button
+                    onClick={() => onDelete(h.id)}
+                    title="Delete Habit"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--red)",
+                      opacity: 0.6,
+                      cursor: "pointer",
+                      padding: "4px",
+                      marginLeft: "0.5rem",
+                      fontSize: "0.9rem"
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.opacity = "1")}
+                    onMouseOut={(e) => (e.currentTarget.style.opacity = "0.6")}
+                  >
+                    🗑️
+                  </button>
                 </li>
               );
             })}

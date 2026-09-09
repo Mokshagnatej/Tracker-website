@@ -33,5 +33,25 @@ module.exports = async function handler(req, res) {
             return res.status(500).json({ error: 'Failed to update habit' });
         }
     }
+
+    if (req.method === 'DELETE') {
+        try {
+            const habitPropName = req.query.id || (req.params && req.params.id);
+            
+            await withRetry(() => notion.databases.update({
+                database_id: process.env.HABIT_DB_ID,
+                properties: {
+                    [habitPropName]: null
+                }
+            }));
+
+            invalidateCache('habits_list');
+            return res.status(200).json({ success: true });
+        } catch (error) {
+            console.error('Error deleting habit:', error);
+            return res.status(500).json({ error: 'Failed to delete habit' });
+        }
+    }
+
     return res.status(405).json({ error: 'Method Not Allowed' });
 };
