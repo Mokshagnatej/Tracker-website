@@ -3,7 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
+    "dev:ui": "vite",
+    "dev:api": "node server.js",
+    "dev": "concurrently \"npm run dev:ui\" \"npm run dev:api\"",
     "build": "vite build",
     "preview": "vite preview"
   },
