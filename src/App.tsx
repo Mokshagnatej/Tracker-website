@@ -135,7 +135,7 @@ export default function App() {
     );
 
     try {
-      const res = await fetch(`/api/habits/${id}`, {
+      const res = await fetch(`/api/habits/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ done: newDone, pageId: habit.pageId })
@@ -173,7 +173,7 @@ export default function App() {
 
   const deleteHabit = async (id: string) => {
     try {
-      const res = await fetch(`/api/habits/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/habits/${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (res.ok) {
         showToast('Habit deleted', 'success');
         fetchData(); // Reload to get the new schema
