@@ -47,7 +47,7 @@ module.exports = async function handler(req, res) {
             ]);
 
             if (!response.results || response.results.length === 0) {
-                return res.status(200).json([]);
+                return res.status(200).json({ habits: [], mood: null, todayPageId: null });
             }
 
             const todayStr = getTodayStr();
@@ -63,6 +63,32 @@ module.exports = async function handler(req, res) {
                 }));
                 response.results.unshift(todayPage);
             }
+
+            const moodExists = !!dbSchema.properties['Mood'];
+            if (!moodExists) {
+                try {
+                    await withRetry(() => notion.databases.update({
+                        database_id: databaseId,
+                        properties: {
+                            Mood: {
+                                select: {
+                                    options: [
+                                        { name: "Awesome", color: "green" },
+                                        { name: "Good", color: "blue" },
+                                        { name: "Okay", color: "yellow" },
+                                        { name: "Bad", color: "red" }
+                                    ]
+                                }
+                            }
+                        }
+                    }));
+                } catch (e) {
+                    console.error("Error adding Mood property", e);
+                }
+            }
+
+            const todayMood = todayPage?.properties?.Mood?.select?.name || null;
+            const todayPageId = todayPage?.id || null;
 
             // Use the DATABASE SCHEMA to get ALL checkbox habits (never misses any)
             const habitsList = Object.keys(dbSchema.properties)
@@ -117,7 +143,7 @@ module.exports = async function handler(req, res) {
                 };
             });
 
-            return res.status(200).json(result);
+            return res.status(200).json({ habits: result, mood: todayMood, todayPageId });
         } catch (error) {
             console.error('Error fetching habits:', error);
             return res.status(500).json({ error: 'Failed to fetch habits' });

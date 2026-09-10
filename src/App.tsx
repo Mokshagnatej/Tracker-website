@@ -20,6 +20,8 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [activeCat, setActiveCat] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [todayMood, setTodayMood] = useState<string | null>(null);
+  const [todayPageId, setTodayPageId] = useState<string | null>(null);
 
   const showToast = useCallback((text: string, type?: "success" | "error") => {
     setToasts((t) => [...t, { id: Date.now().toString(), text, type }]);
@@ -50,13 +52,18 @@ export default function App() {
       }
 
       if (habRes && habRes.ok) {
-        const habs = await habRes.json();
+        const data = await habRes.json();
+        const habs = Array.isArray(data) ? data : data.habits || [];
         const adaptedHabs = habs.map((h: any) => {
           const historyObj: Record<string, boolean> = {};
           if (h.history) h.history.forEach((hi: any) => { historyObj[hi.date] = hi.done; });
           return { ...h, history: historyObj };
         });
         setHabits(adaptedHabs);
+        if (!Array.isArray(data)) {
+          setTodayMood(data.mood || null);
+          setTodayPageId(data.todayPageId || null);
+        }
       }
     } catch (e) {
       showToast('Failed to load data from Notion', 'error');
@@ -141,6 +148,23 @@ export default function App() {
     } catch (e) { showToast('Failed to delete habit', 'error'); setHabits(prevHabs); }
   };
 
+  const updateMood = async (mood: string) => {
+    if (!todayPageId) return showToast('Cannot update mood (no pageId)', 'error');
+    const oldMood = todayMood;
+    setTodayMood(mood);
+    try {
+      const res = await fetch('/api/mood', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: todayPageId, mood })
+      });
+      if (res.ok) { showToast('Mood updated', 'success'); } else throw new Error();
+    } catch (e) {
+      showToast('Failed to update mood', 'error');
+      setTodayMood(oldMood);
+    }
+  };
+
   const expenses = transactions.filter((t) => t.type === "Expense");
   const catCounts: Record<string, number> = {};
   const catTotals: Record<string, number> = {};
@@ -207,7 +231,7 @@ export default function App() {
         ) : page === "entries" ? (
           <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} />
         ) : (
-          <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} showToast={showToast} />
+          <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} showToast={showToast} todayMood={todayMood} onUpdateMood={updateMood} />
         )}
       </main>
 

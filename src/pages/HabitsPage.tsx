@@ -1,8 +1,4 @@
 import { useState, useMemo } from "react";
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  BarChart, Bar, Cell,
-} from "recharts";
 import { Habit } from "../data/mockData";
 
 interface Props {
@@ -11,331 +7,171 @@ interface Props {
   onAdd: (name: string) => void;
   onDelete: (id: string) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
+  todayMood?: string | null;
+  onUpdateMood?: (mood: string) => void;
 }
-
-type Filter = "all" | "done" | "pending";
 
 const todayStr = () => new Date().toISOString().split("T")[0];
-const dateStr = (offset: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() - offset);
-  return d.toISOString().split("T")[0];
-};
-const dayLabel = (offset: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() - offset);
-  return d.toLocaleDateString("en-IN", { weekday: "short" });
-};
 
-const TrendTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="card" style={{ padding: "0.5rem 0.8rem", borderRadius: "var(--r-sm)" }}>
-      <div className="label" style={{ marginBottom: 2 }}>{label}</div>
-      <div className="mono" style={{ fontSize: "0.8rem", color: "var(--gold)" }}>{payload[0].value} done</div>
-    </div>
-  );
-};
+const MOODS = [
+  { name: "Awesome", emoji: "🤩", color: "from-green-400 to-emerald-500" },
+  { name: "Good", emoji: "😊", color: "from-blue-400 to-cyan-500" },
+  { name: "Okay", emoji: "😐", color: "from-yellow-400 to-amber-500" },
+  { name: "Bad", emoji: "😔", color: "from-red-400 to-rose-500" },
+];
 
-function Ring({ pct, done, total }: { pct: number; done: number; total: number }) {
-  const r = 48, c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
-  return (
-    <div style={{ position: "relative", width: 120, height: 120, flexShrink: 0 }}>
-      <svg width="120" height="120" style={{ transform: "rotate(-90deg)" }}>
-        <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,252,240,0.06)" strokeWidth="8" />
-        <circle
-          cx="60" cy="60" r={r} fill="none"
-          stroke="url(#ringG)" strokeWidth="8"
-          strokeDasharray={`${dash} ${c}`} strokeLinecap="round"
-          style={{ transition: "stroke-dasharray 1s cubic-bezier(0.16,1,0.3,1)" }}
-        />
-        <defs>
-          <linearGradient id="ringG" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#8b5cf6" />
-            <stop offset="50%" stopColor="#ec4899" />
-            <stop offset="100%" stopColor="#f43f5e" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-        <span className="display" style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--text)", lineHeight: 1 }}>{pct}%</span>
-        <span className="label" style={{ fontSize: "0.55rem" }}>{done}/{total}</span>
-      </div>
-    </div>
-  );
-}
-
-export default function HabitsPage({ habits, onToggle, onAdd, onDelete, showToast }: Props) {
-  const [filter, setFilter] = useState<Filter>("all");
+export default function HabitsPage({ habits, onToggle, onAdd, onDelete, showToast, todayMood, onUpdateMood }: Props) {
   const [newName, setNewName] = useState("");
   const today = todayStr();
-
-  const doneToday = habits.filter((h) => h.history[today]).length;
-  const total = habits.length;
-  const bestStreak = Math.max(0, ...habits.map((h) => h.streak));
-  const rate = total > 0 ? Math.round((doneToday / total) * 100) : 0;
-
-  const filtered = useMemo(() => {
-    if (filter === "done")    return habits.filter((h) =>  h.history[today]);
-    if (filter === "pending") return habits.filter((h) => !h.history[today]);
-    return habits;
-  }, [habits, filter, today]);
-
-  const weeklyData = useMemo(() =>
-    Array.from({ length: 7 }, (_, i) => {
-      const d = dateStr(6 - i);
-      return { day: dayLabel(6 - i), done: habits.filter((h) => h.history[d]).length };
-    }),
-    [habits]
-  );
-
-  const streakData = useMemo(() =>
-    habits.map((h) => ({
-      name: h.name.length > 14 ? h.name.slice(0, 12) + "…" : h.name,
-      streak: h.streak || 0,
-      doneToday: !!h.history[today],
-    })),
-    [habits, today]
-  );
-
-  const heatDates = useMemo(() => Array.from({ length: 14 }, (_, i) => dateStr(13 - i)), []);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
     onAdd(newName.trim());
-    showToast(`"${newName.trim()}" added`);
     setNewName("");
   };
 
-  const s = (v: string | number) => String(v);
+  const doneTodayCount = habits.filter((h) => h.history[today]).length;
+  const total = habits.length;
+  const progress = total > 0 ? (doneTodayCount / total) * 100 : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-
-      <div className="card" style={{ padding: "1.75rem 1.5rem 1.5rem" }}>
-        <div className="label" style={{ marginBottom: "1.25rem" }}>Today's Progress</div>
-        <div style={{ display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap" }}>
-          <Ring pct={rate} done={doneToday} total={total} />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", flex: 1, minWidth: 160 }}>
-            {[
-              { l: "Best Streak",  v: `${bestStreak}d`, em: "🔥", c: "var(--amber)" },
-              { l: "Habits Total", v: s(total),         em: "◎",  c: "var(--gold)" },
-              { l: "Done Today",   v: s(doneToday),     em: "✓",  c: "var(--green)" },
-              { l: "Pending",      v: s(total-doneToday), em: "○", c: "var(--text-2)" },
-            ].map(({ l, v, em, c }) => (
-              <div key={l} className="card-flat" style={{ padding: "0.75rem 0.9rem" }}>
-                <div style={{ fontSize: "0.9rem", marginBottom: "0.2rem" }}>{em}</div>
-                <div className="mono" style={{ fontSize: "1.25rem", fontWeight: 500, color: c, letterSpacing: "-0.04em", lineHeight: 1 }}>{v}</div>
-                <div className="label" style={{ fontSize: "0.55rem", marginTop: 3 }}>{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "1.25rem", paddingTop: "1rem", borderTop: "0.5px solid var(--border-2)" }}>
-          <div className="pdot" />
-          <span className="label" style={{ fontSize: "0.58rem" }}>Synced · {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: "1.25rem 1.25rem 0.75rem" }}>
-        <div className="label" style={{ marginBottom: "0.75rem" }}>7-Day Completion</div>
-        <div style={{ height: 130 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={weeklyData} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
-              <defs>
-                <linearGradient id="trendFill" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                  <stop offset="50%" stopColor="#ec4899" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.4} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="1 4" stroke="rgba(255,252,240,0.05)" vertical={false} />
-              <XAxis dataKey="day" tick={{ fill: "rgba(255,252,240,0.22)", fontSize: 10, fontFamily: "var(--ff-mono)" }} axisLine={false} tickLine={false} />
-              <YAxis hide domain={[0, total || 1]} />
-              <Tooltip content={<TrendTooltip />} cursor={{ stroke: "rgba(236,72,153,0.2)", strokeWidth: 1 }} />
-              <Line type="monotone" dataKey="done" stroke="url(#trendFill)" strokeWidth={3} dot={{ fill: "#ec4899", strokeWidth: 0, r: 4 }} activeDot={{ r: 6, fill: "#f43f5e", strokeWidth: 0 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {streakData.length > 0 && (
-        <div className="card" style={{ padding: "1.25rem 1.25rem 0.75rem" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", marginBottom: "0.75rem" }}>
-            <div className="label">Streak Lengths</div>
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              {[{ c: "var(--green)", l: "Done today" }, { c: "var(--gold)", l: "Active" }, { c: "rgba(255,252,240,0.15)", l: "Inactive" }].map(({ c, l }) => (
-                <div key={l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />
-                  <span className="label" style={{ fontSize: "0.55rem" }}>{l}</span>
-                </div>
-              ))}
+    <div className="flex flex-col gap-6 max-w-5xl mx-auto">
+      {/* Hero / Mood Section */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-8 text-white shadow-xl">
+        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
+        
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Daily Habits</h1>
+            <p className="text-white/80 text-sm">
+              You've completed {doneTodayCount} out of {total} habits today.
+            </p>
+            <div className="mt-4 w-full bg-white/20 rounded-full h-2 max-w-xs overflow-hidden backdrop-blur-sm">
+              <div 
+                className="bg-white h-full rounded-full transition-all duration-1000 ease-out" 
+                style={{ width: `${progress}%` }} 
+              />
             </div>
           </div>
-          <div style={{ height: 160 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={streakData} layout="vertical" barSize={10} margin={{ left: 0, right: 8, top: 0, bottom: 0 }}>
-                <XAxis type="number" tick={{ fill: "rgba(255,252,240,0.2)", fontSize: 9, fontFamily: "var(--ff-mono)" }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: "rgba(255,252,240,0.4)", fontSize: 10, fontFamily: "var(--ff-body)" }} axisLine={false} tickLine={false} width={88} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0].payload;
-                    return (
-                      <div className="card" style={{ padding: "0.45rem 0.75rem", borderRadius: "var(--r-sm)" }}>
-                        <div className="label" style={{ marginBottom: 2 }}>{d.name}</div>
-                        <div className="mono" style={{ fontSize: "0.8rem", color: "var(--gold)" }}>{d.streak}d streak</div>
-                      </div>
-                    );
-                  }}
-                  cursor={{ fill: "rgba(255,252,240,0.02)" }}
-                />
-                <Bar dataKey="streak" radius={[0, 4, 4, 0]} background={{ fill: "rgba(255,252,240,0.025)", radius: 4 }}>
-                  {streakData.map((e, i) => (
-                    <Cell key={i} fill={e.doneToday ? "#4ade80" : e.streak > 0 ? "#c9a96e" : "rgba(255,252,240,0.12)"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
 
-      <div className="card" style={{ padding: "1.25rem 1.5rem", overflowX: "auto" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem", marginBottom: "1rem" }}>
-          <div className="label">14-Day Heatmap</div>
-          <div className="label" style={{ fontSize: "0.55rem", color: "var(--text-4)" }}>past two weeks</div>
-        </div>
-        <div style={{ minWidth: 480 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "100px repeat(14,1fr)", gap: 3, marginBottom: 6 }}>
-            <div />
-            {heatDates.map((d, i) => {
-              const dt = new Date(d);
-              const isToday = d === today;
-              return (
-                <div key={i} style={{ textAlign: "center", fontSize: "0.55rem", fontFamily: "var(--ff-mono)", color: isToday ? "var(--gold)" : "rgba(255,252,240,0.2)", fontWeight: isToday ? 600 : 400, lineHeight: 1.3 }}>
-                  {dt.toLocaleDateString("en-IN", { weekday: "narrow" })}<br />{dt.getDate()}
-                </div>
-              );
-            })}
-          </div>
-          {habits.map((h) => (
-            <div key={h.id} style={{ display: "grid", gridTemplateColumns: "100px repeat(14,1fr)", gap: 3, marginBottom: 3, alignItems: "center" }}>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 6 }} title={h.name}>{h.name}</div>
-              {heatDates.map((d, di) => {
-                const done = h.history[d];
-                const isFuture = d > today;
-                const isToday = d === today;
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5 w-full md:w-auto shadow-lg">
+            <div className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-3 text-center md:text-left">
+              How are you feeling today?
+            </div>
+            <div className="flex gap-3 justify-center md:justify-start">
+              {MOODS.map(m => {
+                const isActive = todayMood === m.name;
                 return (
-                  <div
-                    key={di}
-                    className="hcell"
-                    title={`${h.name} · ${d} · ${isFuture ? "—" : done ? "✓" : "✗"}`}
-                    style={{
-                      background: isFuture ? "rgba(255,252,240,0.03)" : done ? "rgba(74,222,128,0.65)" : "rgba(248,113,113,0.18)",
-                      boxShadow: (done && !isFuture) ? "0 0 5px rgba(74,222,128,0.2)" : undefined,
-                      outline: isToday ? "1px solid rgba(201,169,110,0.7)" : undefined,
-                      outlineOffset: isToday ? 1 : undefined,
-                    }}
-                  />
+                  <button
+                    key={m.name}
+                    onClick={() => onUpdateMood && onUpdateMood(m.name)}
+                    className={`flex flex-col items-center gap-1 transition-all duration-300 transform ${isActive ? 'scale-110' : 'hover:scale-105 opacity-60 hover:opacity-100'}`}
+                  >
+                    <div className={`w-12 h-12 flex items-center justify-center text-2xl rounded-full bg-gradient-to-br ${isActive ? m.color + ' shadow-lg shadow-black/20' : 'from-white/20 to-white/10'}`}>
+                      {m.emoji}
+                    </div>
+                    <span className={`text-[10px] font-medium ${isActive ? 'text-white' : 'text-white/60'}`}>{m.name}</span>
+                  </button>
                 );
               })}
             </div>
-          ))}
-          <div style={{ display: "flex", gap: "1rem", marginTop: "0.85rem", paddingTop: "0.75rem", borderTop: "0.5px solid var(--border-2)" }}>
-            {[
-              { c: "rgba(74,222,128,0.65)",  l: "Done" },
-              { c: "rgba(248,113,113,0.18)", l: "Missed" },
-              { c: "rgba(255,252,240,0.03)", l: "No data" },
-            ].map(({ c, l }) => (
-              <div key={l} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div style={{ width: 12, height: 12, borderRadius: 3, background: c }} />
-                <span className="label" style={{ fontSize: "0.55rem" }}>{l}</span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
-      <div className="card" style={{ padding: "1.25rem 1.5rem" }}>
-        <div className="label" style={{ marginBottom: "0.85rem" }}>New Habit</div>
-        <form onSubmit={handleAdd} style={{ display: "flex", gap: "0.6rem" }}>
-          <input className="input" style={{ flex: 1 }} type="text" placeholder="e.g. Read 30 pages" value={newName} onChange={(e) => setNewName(e.target.value)} required />
-          <button type="submit" className="btn btn-gold" style={{ flexShrink: 0 }}>Add →</button>
-        </form>
-      </div>
+      {/* New Habit Input */}
+      <form onSubmit={handleAdd} className="flex gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100 focus-within:ring-2 focus-within:ring-purple-100 transition-all">
+        <input 
+          className="flex-1 bg-transparent border-none outline-none px-4 text-sm text-gray-700 placeholder-gray-400" 
+          type="text" 
+          placeholder="What new habit do you want to start? e.g., Read 10 pages" 
+          value={newName} 
+          onChange={(e) => setNewName(e.target.value)} 
+          required 
+        />
+        <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm">
+          Add Habit
+        </button>
+      </form>
 
-      <div className="card" style={{ overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.5rem", borderBottom: "0.5px solid var(--border-2)" }}>
-          <div className="label">Today's Habits</div>
-          <div className="chips">
-            {(["all", "done", "pending"] as const).map((f) => (
-              <button key={f} onClick={() => setFilter(f)} className={`chip ${filter === f ? "active" : ""}`} style={{ textTransform: "capitalize" }}>{f}</button>
-            ))}
-          </div>
-        </div>
-        {filtered.length === 0 ? (
-          <div style={{ padding: "3rem 1.5rem", textAlign: "center", color: "var(--text-4)", fontStyle: "italic", fontSize: "0.85rem" }}>
-            {filter === "done" ? "Nothing completed yet." : filter === "pending" ? "All done — excellent work." : "Add your first habit."}
+      {/* Habits Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {habits.length === 0 ? (
+          <div className="col-span-full py-12 text-center text-gray-400 text-sm">
+            You don't have any habits yet. Start tracking today!
           </div>
         ) : (
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {filtered.map((h, i) => {
-              const done = !!h.history[today];
-              const isHot = h.streak >= 5;
-              const weekDots = Array.from({ length: 7 }, (_, j) => {
-                const d = dateStr(6 - j);
-                return { hit: !!h.history[d], isToday: d === today };
-              });
-              return (
-                <li
-                  key={h.id}
-                  style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.85rem 1.5rem", borderBottom: i < filtered.length - 1 ? "0.5px solid rgba(255,252,240,0.04)" : "none", transition: "background 0.15s", opacity: done ? 0.7 : 1 }}
-                  onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,252,240,0.018)")}
-                  onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: done ? "var(--green)" : "rgba(255,252,240,0.1)", boxShadow: done ? "0 0 8px var(--green)" : undefined, transition: "all 0.3s" }} />
-                  <input type="checkbox" className="hcheck" checked={done} onChange={() => { onToggle(h.id); showToast(done ? "Unchecked" : "✓ Marked complete"); }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "0.875rem", fontWeight: 500, lineHeight: 1.3, color: done ? "var(--text-3)" : "var(--text)", textDecoration: done ? "line-through" : undefined, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {h.name}
-                    </div>
-                    <div style={{ fontSize: "0.7rem", marginTop: 2, color: isHot ? "var(--amber)" : "var(--text-4)", fontFamily: "var(--ff-mono)" }}>
-                      {isHot ? "🔥" : "◎"} {h.streak}d
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                    <div style={{ display: "flex", gap: 2 }}>
-                      {weekDots.map((dot, di) => (
-                        <div key={di} style={{ width: 7, height: 7, borderRadius: 2, background: dot.hit ? "rgba(74,222,128,0.7)" : "rgba(255,252,240,0.07)", outline: dot.isToday ? "1px solid rgba(201,169,110,0.7)" : undefined, outlineOffset: 1, transition: "background 0.2s" }} />
-                      ))}
-                    </div>
-                    <span className="label" style={{ fontSize: "0.5rem" }}>7d</span>
+          habits.map((h) => {
+            const done = !!h.history[today];
+            const isHot = h.streak >= 3;
+            return (
+              <div 
+                key={h.id} 
+                className={`relative group overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-md ${done ? 'bg-green-50/50 border-green-100' : 'bg-white border-gray-100'}`}
+              >
+                {/* Background glow if done */}
+                {done && (
+                  <div className="absolute -right-10 -top-10 w-32 h-32 bg-green-400 opacity-10 rounded-full blur-2xl"></div>
+                )}
+                
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                  <div 
+                    onClick={() => onToggle(h.id)}
+                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center cursor-pointer transition-colors ${done ? 'bg-green-500 border-green-500 text-white shadow-sm shadow-green-500/20' : 'border-gray-300 hover:border-gray-400'}`}
+                  >
+                    {done && (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </div>
                   <button
                     onClick={() => onDelete(h.id)}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all cursor-pointer bg-white p-1 rounded-md shadow-sm border border-gray-100"
                     title="Delete Habit"
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--red)",
-                      opacity: 0.6,
-                      cursor: "pointer",
-                      padding: "4px",
-                      marginLeft: "0.5rem",
-                      fontSize: "0.9rem"
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.opacity = "1")}
-                    onMouseOut={(e) => (e.currentTarget.style.opacity = "0.6")}
                   >
-                    🗑️
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                   </button>
-                </li>
-              );
-            })}
-          </ul>
+                </div>
+                
+                <div className="relative z-10 cursor-pointer" onClick={() => onToggle(h.id)}>
+                  <h3 className={`font-semibold text-lg mb-1 truncate transition-colors ${done ? 'text-gray-800' : 'text-gray-900'}`}>
+                    {h.name}
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs font-medium">
+                    <div className={`px-2 py-0.5 rounded-full ${isHot ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {isHot ? '🔥' : '⭐'} {h.streak} day streak
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Mini Heatmap */}
+                <div className="mt-5 flex gap-1 justify-between relative z-10">
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - (6 - i));
+                    const dStr = d.toISOString().split("T")[0];
+                    const isDone = h.history[dStr];
+                    const isToday = dStr === today;
+                    return (
+                      <div 
+                        key={dStr} 
+                        className={`h-6 flex-1 rounded-sm transition-colors relative group/day ${isDone ? 'bg-green-400' : 'bg-gray-100'} ${isToday && !isDone ? 'ring-2 ring-gray-200' : ''}`}
+                      >
+                         <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover/day:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-20">
+                            {d.toLocaleDateString('en-US', { weekday: 'short' })}
+                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
