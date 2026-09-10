@@ -154,34 +154,55 @@ export default function App() {
   };
 
   const addHabit = async (name: string) => {
+    const trimmedName = name.trim();
+    // Optimistic UI update
+    const newHabit: Habit = {
+      id: trimmedName,
+      name: trimmedName,
+      done: false,
+      streak: 0,
+      pageId: habits.length > 0 ? habits[0].pageId : null,
+      history: {},
+      weeklyRate: 0
+    };
+    setHabits(prev => [newHabit, ...prev]);
+
     try {
       const res = await fetch('/api/habits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ name: trimmedName })
       });
       if (res.ok) {
         showToast('Habit added', 'success');
-        fetchData(); // Reload to get the new schema
+        setTimeout(() => fetchData(), 2500); // Delay fetch to allow Notion schema to update
       } else {
         throw new Error();
       }
     } catch (e) {
       showToast('Failed to add habit', 'error');
+      // Revert optimistic update
+      setHabits(prev => prev.filter(h => h.id !== trimmedName));
     }
   };
 
   const deleteHabit = async (id: string) => {
+    // Optimistic UI update
+    const previousHabits = [...habits];
+    setHabits(prev => prev.filter(h => h.id !== id));
+
     try {
       const res = await fetch(`/api/habits/${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (res.ok) {
         showToast('Habit deleted', 'success');
-        fetchData(); // Reload to get the new schema
+        setTimeout(() => fetchData(), 2500); // Delay fetch to allow Notion schema to update
       } else {
         throw new Error();
       }
     } catch (e) {
       showToast('Failed to delete habit', 'error');
+      // Revert optimistic update
+      setHabits(previousHabits);
     }
   };
 
