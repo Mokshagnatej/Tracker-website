@@ -19,12 +19,6 @@ app.all('/api/habits/:id', (req, res) => {
     req.query.id = req.params.id;
     require('./api/habits/[id].js')(req, res);
 });
-app.all('/api/tasks', (req, res) => require('./api/tasks.js')(req, res));
-app.all('/api/tasks/:id', (req, res) => {
-    if(!req.query) req.query = {};
-    req.query.id = req.params.id;
-    require('./api/tasks/[id].js')(req, res);
-});
 app.all('/api/metadata', (req, res) => require('./api/metadata.js')(req, res));
 
 app.use(express.static(path.join(__dirname, 'dist')));

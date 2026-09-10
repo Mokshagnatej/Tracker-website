@@ -44,16 +44,16 @@ export const CATEGORIES = [
 export const ACCOUNTS = ["HDFC", "SBI", "Paytm", "Cash", "GPay"];
 
 export const CAT_DOT: Record<string, string> = {
-  "Food & Dining":    "#e8522a",
-  "Transport":        "#2b4c7e",
-  "Shopping":         "#1e4b68",
-  "Bills & Utilities":"#e8b84b",
-  "Entertainment":    "#f4874b",
-  "Health":           "#2a9d8f",
-  "Salary":           "#22c55e",
-  "Freelance":        "#6366f1",
-  "Rent":             "#8b5cf6",
-  "Other":            "#94a3b8",
+  "Food & Dining":    "#f43f5e", // Rose
+  "Transport":        "#0ea5e9", // Sky
+  "Shopping":         "#8b5cf6", // Violet
+  "Bills & Utilities":"#f59e0b", // Amber
+  "Entertainment":    "#ec4899", // Pink
+  "Health":           "#10b981", // Emerald
+  "Salary":           "#22c55e", // Green
+  "Freelance":        "#6366f1", // Indigo
+  "Rent":             "#a855f7", // Purple
+  "Other":            "#94a3b8", // Slate
 };
 
 export const CAT_COLOR = CAT_DOT;

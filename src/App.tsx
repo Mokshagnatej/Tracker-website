@@ -1,12 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
-import { Transaction, Habit, Task, CATEGORIES, CAT_DOT } from "./data/mockData";
+import { Transaction, Habit, CATEGORIES, CAT_DOT } from "./data/mockData";
 import Dashboard from "./pages/Dashboard";
 import AllEntries from "./pages/AllEntries";
 import HabitsPage from "./pages/HabitsPage";
-import TasksPage from "./pages/TasksPage";
 import ToastContainer, { ToastMessage } from "./components/Toast";
 
-type Page = "dashboard" | "entries" | "habits" | "tasks";
+type Page = "dashboard" | "entries" | "habits";
 
 const fmt = (n: number) =>
   "₹" + Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -17,7 +16,6 @@ export default function App() {
   const [page, setPage] = useState<Page>("dashboard");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [metadata, setMetadata] = useState<{ categories: {id: string, name: string}[], accounts: {id: string, name: string}[] }>({ categories: [], accounts: [] });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [activeCat, setActiveCat] = useState<string>("all");
@@ -33,10 +31,9 @@ export default function App() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [txnRes, habRes, taskRes, metaRes] = await Promise.all([
+      const [txnRes, habRes, metaRes] = await Promise.all([
         fetch('/api/expenses').catch(() => null),
         fetch('/api/habits').catch(() => null),
-        fetch('/api/tasks').catch(() => null),
         fetch('/api/metadata').catch(() => null)
       ]);
 
@@ -60,16 +57,6 @@ export default function App() {
           return { ...h, history: historyObj };
         });
         setHabits(adaptedHabs);
-      }
-
-      if (taskRes && taskRes.ok) {
-        const tsks = await taskRes.json();
-        const adaptedTasks = tsks.map((h: any) => {
-          const historyObj: Record<string, boolean> = {};
-          if (h.history) h.history.forEach((hi: any) => { historyObj[hi.date] = hi.done; });
-          return { ...h, history: historyObj };
-        });
-        setTasks(adaptedTasks);
       }
     } catch (e) {
       showToast('Failed to load data from Notion', 'error');
@@ -154,46 +141,6 @@ export default function App() {
     } catch (e) { showToast('Failed to delete habit', 'error'); setHabits(prevHabs); }
   };
 
-  // Tasks Operations
-  const toggleTask = async (id: string) => {
-    const task = tasks.find(t => t.id === id);
-    if (!task || !task.pageId) return showToast('Cannot update task (no pageId)', 'error');
-    const today = todayStr();
-    const wasDone = !!task.history[today];
-    const newDone = !wasDone;
-    setTasks((prev) => prev.map((h) => h.id === id ? { ...h, history: { ...h.history, [today]: newDone }, streak: newDone ? h.streak + 1 : Math.max(0, h.streak - 1) } : h));
-    try {
-      const res = await fetch(`/api/tasks/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ done: newDone, pageId: task.pageId })
-      });
-      if (!res.ok) throw new Error();
-    } catch (e) {
-      showToast('Failed to update task', 'error');
-      setTasks((prev) => prev.map((h) => h.id === id ? { ...h, history: { ...h.history, [today]: wasDone }, streak: wasDone ? h.streak + 1 : Math.max(0, h.streak - 1) } : h));
-    }
-  };
-
-  const addTask = async (name: string) => {
-    const trimmed = name.trim();
-    const temp: Task = { id: trimmed, name: trimmed, streak: 0, pageId: tasks.length && tasks[0].pageId ? tasks[0].pageId : undefined, history: {}, weeklyRate: 0 };
-    setTasks(p => [temp, ...p]);
-    try {
-      const res = await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: trimmed }) });
-      if (res.ok) { showToast('Task added', 'success'); setTimeout(fetchData, 2500); } else throw new Error();
-    } catch (e) { showToast('Failed to add task', 'error'); setTasks(p => p.filter(t => t.id !== trimmed)); }
-  };
-
-  const deleteTask = async (id: string) => {
-    const prev = [...tasks];
-    setTasks(p => p.filter(t => t.id !== id));
-    try {
-      const res = await fetch(`/api/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      if (res.ok) { showToast('Task deleted', 'success'); setTimeout(fetchData, 2500); } else throw new Error();
-    } catch (e) { showToast('Failed to delete task', 'error'); setTasks(prev); }
-  };
-
   const expenses = transactions.filter((t) => t.type === "Expense");
   const catCounts: Record<string, number> = {};
   const catTotals: Record<string, number> = {};
@@ -226,9 +173,6 @@ export default function App() {
           <button className={`nav-item ${page === "habits" ? "active" : ""}`} onClick={() => setPage("habits")}>
             <span style={{ fontSize: "0.8rem" }}>◎</span> Habits
           </button>
-          <button className={`nav-item ${page === "tasks" ? "active" : ""}`} onClick={() => setPage("tasks")}>
-            <span style={{ fontSize: "0.8rem" }}>✓</span> Tasks
-          </button>
         </nav>
 
         <div className="sidebar-section-label">
@@ -256,18 +200,28 @@ export default function App() {
       </aside>
 
       <main className="main-area">
-        {loading && transactions.length === 0 && habits.length === 0 && tasks.length === 0 ? (
+        {loading && transactions.length === 0 && habits.length === 0 ? (
           <div style={{ padding: "4rem", textAlign: "center", color: "var(--text-4)" }}>Syncing with Notion...</div>
         ) : page === "dashboard" ? (
           <Dashboard transactions={filteredTransactions} catTotals={catTotals} catCounts={catCounts} />
         ) : page === "entries" ? (
           <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} />
-        ) : page === "habits" ? (
-          <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} showToast={showToast} />
         ) : (
-          <TasksPage tasks={tasks} onToggle={toggleTask} onAdd={addTask} onDelete={deleteTask} showToast={showToast} />
+          <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} showToast={showToast} />
         )}
       </main>
+
+      <nav className="bottom-nav">
+        <button className={`bnav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => setPage("dashboard")}>
+          <span>▦</span><div className="bnav-label">Dash</div>
+        </button>
+        <button className={`bnav-item ${page === "entries" ? "active" : ""}`} onClick={() => setPage("entries")}>
+          <span>☰</span><div className="bnav-label">Entries</div>
+        </button>
+        <button className={`bnav-item ${page === "habits" ? "active" : ""}`} onClick={() => setPage("habits")}>
+          <span>◎</span><div className="bnav-label">Habits</div>
+        </button>
+      </nav>
 
       <ToastContainer messages={toasts} onRemove={removeToast} />
     </div>

@@ -123,15 +123,16 @@ export default function Dashboard({ transactions, catTotals }: Props) {
               <AreaChart data={chartData} margin={{ top: 4, right: 0, bottom: 0, left: -8 }}>
                 <defs>
                   <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#e8522a" stopOpacity={0.18} />
-                    <stop offset="100%" stopColor="#e8522a" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.25} />
+                    <stop offset="50%" stopColor="#f97316" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#f97316" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" stroke="#f0f0ee" vertical={false} />
                 <XAxis dataKey="label" tick={{ fill: "#9ca3af", fontSize: 11, fontFamily: "Inter" }} axisLine={false} tickLine={false} interval={4} />
                 <YAxis tick={{ fill: "#9ca3af", fontSize: 11, fontFamily: "Inter" }} axisLine={false} tickLine={false} tickFormatter={(v) => v === 0 ? "0" : `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip content={<TrendTooltip />} cursor={{ stroke: "rgba(0,0,0,0.06)", strokeWidth: 1 }} />
-                <Area type="monotone" dataKey="value" stroke="#e8522a" strokeWidth={2} fill="url(#spendGrad)" dot={false} activeDot={{ r: 5, fill: "#e8522a", strokeWidth: 0 }} />
+                <Area type="monotone" dataKey="value" stroke="url(#spendGrad)" strokeWidth={2} fill="url(#spendGrad)" dot={false} activeDot={{ r: 5, fill: "#f43f5e", strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

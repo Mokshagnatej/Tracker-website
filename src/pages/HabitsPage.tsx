@@ -51,9 +51,10 @@ function Ring({ pct, done, total }: { pct: number; done: number; total: number }
           style={{ transition: "stroke-dasharray 1s cubic-bezier(0.16,1,0.3,1)" }}
         />
         <defs>
-          <linearGradient id="ringG" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#c9a96e" />
-            <stop offset="100%" stopColor="#4ade80" />
+          <linearGradient id="ringG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#8b5cf6" />
+            <stop offset="50%" stopColor="#ec4899" />
+            <stop offset="100%" stopColor="#f43f5e" />
           </linearGradient>
         </defs>
       </svg>
@@ -144,16 +145,17 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete, showToas
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={weeklyData} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
               <defs>
-                <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#c9a96e" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="#c9a96e" stopOpacity={0} />
+                <linearGradient id="trendFill" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                  <stop offset="50%" stopColor="#ec4899" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.4} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="1 4" stroke="rgba(255,252,240,0.05)" vertical={false} />
               <XAxis dataKey="day" tick={{ fill: "rgba(255,252,240,0.22)", fontSize: 10, fontFamily: "var(--ff-mono)" }} axisLine={false} tickLine={false} />
               <YAxis hide domain={[0, total || 1]} />
-              <Tooltip content={<TrendTooltip />} cursor={{ stroke: "rgba(201,169,110,0.2)", strokeWidth: 1 }} />
-              <Line type="monotone" dataKey="done" stroke="#c9a96e" strokeWidth={2} dot={{ fill: "#c9a96e", strokeWidth: 0, r: 3.5 }} activeDot={{ r: 5, fill: "#e0c48a", strokeWidth: 0 }} />
+              <Tooltip content={<TrendTooltip />} cursor={{ stroke: "rgba(236,72,153,0.2)", strokeWidth: 1 }} />
+              <Line type="monotone" dataKey="done" stroke="url(#trendFill)" strokeWidth={3} dot={{ fill: "#ec4899", strokeWidth: 0, r: 4 }} activeDot={{ r: 6, fill: "#f43f5e", strokeWidth: 0 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
