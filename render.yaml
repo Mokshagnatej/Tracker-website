@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: moksha-tracker
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NOTION_TOKEN
+        sync: false
+      - key: EXPENSE_DB_ID
+        sync: false
+      - key: HABIT_DB_ID
+        sync: false
+      - key: CATEGORY_DB_ID
+        sync: false
+      - key: ACCOUNT_DB_ID
+        sync: false
+      - key: MONTH_DB_ID
+        sync: false

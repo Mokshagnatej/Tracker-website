@@ -2,6 +2,9 @@
   "name": "moksha-tracker",
   "private": true,
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev:ui": "vite",
     "dev:api": "node server.js",
