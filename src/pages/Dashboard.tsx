@@ -118,8 +118,8 @@ export default function Dashboard({ transactions, catTotals }: Props) {
         <div className="card">
           <div style={{ fontWeight: 600, fontSize: "1rem", color: "#111", letterSpacing: "-0.01em" }}>Spending trend</div>
           <div style={{ fontSize: "0.78rem", color: "#9ca3af", marginTop: 2, marginBottom: "1.25rem" }}>Daily total over time</div>
-          <div style={{ height: 220 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ height: 220, minHeight: 220, overflow: "hidden" }}>
+            <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={chartData} margin={{ top: 4, right: 0, bottom: 0, left: -8 }}>
                 <defs>
                   <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
@@ -143,8 +143,8 @@ export default function Dashboard({ transactions, catTotals }: Props) {
 
           {donutData.length > 0 ? (
             <>
-              <div style={{ height: 190 }}>
-                <ResponsiveContainer width="100%" height="100%">
+              <div style={{ height: 190, minHeight: 190, overflow: "hidden" }}>
+                <ResponsiveContainer width="100%" height={190}>
                   <PieChart>
                     <Pie data={donutData} cx="50%" cy="50%" innerRadius={55} outerRadius={82} dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}>
                       {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
@@ -186,13 +186,13 @@ export default function Dashboard({ transactions, catTotals }: Props) {
         <div className="card">
           <div style={{ fontWeight: 600, fontSize: "1rem", color: "#111", letterSpacing: "-0.01em", marginBottom: "0.25rem" }}>Spend by category</div>
           <div style={{ fontSize: "0.78rem", color: "#9ca3af", marginBottom: "1.25rem" }}>Total amount per category</div>
-          <div style={{ height: 240 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ height: 240, minHeight: 240, overflow: "hidden" }}>
+            <ResponsiveContainer width="100%" height={240}>
               <BarChart data={barData} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
                 <CartesianGrid strokeDasharray="4 4" stroke="#f0f0ee" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: "#9ca3af", fontSize: 11, fontFamily: "Inter" }} axisLine={false} tickLine={false} tickFormatter={(v: string) => v.length > 9 ? v.slice(0, 8) + "…" : v} />
                 <YAxis tick={{ fill: "#9ca3af", fontSize: 11, fontFamily: "Inter" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v === 0 ? "0" : `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip content={<BarTip />} cursor={{ fill: "rgba(0,0,0,0.025)", radius: 6 }} />
+                <Tooltip content={<BarTip />} cursor={{ fill: "rgba(0,0,0,0.025)" }} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={64}>
                   {barData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Bar>
