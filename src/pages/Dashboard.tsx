@@ -61,12 +61,18 @@ export default function Dashboard({ transactions, catTotals }: Props) {
 
   const chartData = useMemo(() => get30DayData(transactions), [transactions]);
 
-  const donutData = sortedCats.map(([cat, val]) => ({
-    name: cat, value: val, color: CAT_COLOR[cat] || "#94a3b8",
+  const FALLBACK_COLORS = [
+    "#f43f5e", "#0ea5e9", "#8b5cf6", "#f59e0b", "#ec4899",
+    "#10b981", "#22c55e", "#6366f1", "#a855f7", "#14b8a6",
+    "#f97316", "#06b6d4", "#84cc16", "#d946ef", "#eab308"
+  ];
+
+  const donutData = sortedCats.map(([cat, val], index) => ({
+    name: cat, value: val, color: CAT_COLOR[cat] || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
   }));
 
-  const barData = sortedCats.map(([cat, val]) => ({
-    name: cat, value: val, color: CAT_COLOR[cat] || "#94a3b8",
+  const barData = sortedCats.map(([cat, val], index) => ({
+    name: cat, value: val, color: CAT_COLOR[cat] || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
   }));
 
   return (
@@ -108,7 +114,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
             <span className="stat-icon">📅</span>
           </div>
           <div className="stat-value" style={{ fontSize: "1.25rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            {topCat ? <><span>{CAT_ICON[topCat[0]]}</span> {fmt(topCat[1])}</> : "—"}
+            {topCat ? <><span>{CAT_ICON[topCat[0]] || "◈"}</span> {fmt(topCat[1])}</> : "—"}
           </div>
           <div className="stat-sub">{topCat ? topCat[0] : "No data"}</div>
         </div>
@@ -169,7 +175,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
                 {donutData.slice(0, 5).map((item) => (
                   <div key={item.name} className="legend-item">
                     <span className="legend-dot" style={{ background: item.color }} />
-                    <span className="legend-name">{CAT_ICON[item.name]} {item.name.length > 13 ? item.name.slice(0, 11) + "…" : item.name}</span>
+                    <span className="legend-name">{CAT_ICON[item.name] || "◈"} {item.name.length > 13 ? item.name.slice(0, 11) + "…" : item.name}</span>
                     <span className="legend-val">{fmt(item.value)}</span>
                   </div>
                 ))}
