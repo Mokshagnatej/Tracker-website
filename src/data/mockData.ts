@@ -15,7 +15,11 @@ export interface Habit {
   name: string;
   streak: number;
   history: Record<string, boolean>;
+  pageId?: string;
+  weeklyRate?: number;
 }
+
+export interface Task extends Habit {}
 
 const today = new Date();
 const dateStr = (offset = 0) => {
