@@ -10,13 +10,23 @@ export interface Transaction {
   date: string;
 }
 
+export interface HabitHistory {
+  date: string;
+  done: boolean;
+}
+
 export interface Habit {
   id: string;
   name: string;
   streak: number;
-  history: Record<string, boolean>;
+  history: HabitHistory[];
+  heatmapHistory?: HabitHistory[];
   pageId?: string;
   weeklyRate?: number;
+  category?: string;
+  time?: string;
+  icon?: string;
+  done?: boolean;
 }
 
 export interface Task extends Habit {}

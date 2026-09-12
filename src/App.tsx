@@ -54,12 +54,7 @@ export default function App() {
       if (habRes && habRes.ok) {
         const data = await habRes.json();
         const habs = Array.isArray(data) ? data : data.habits || [];
-        const adaptedHabs = habs.map((h: any) => {
-          const historyObj: Record<string, boolean> = {};
-          if (h.history) h.history.forEach((hi: any) => { historyObj[hi.date] = hi.done; });
-          return { ...h, history: historyObj };
-        });
-        setHabits(adaptedHabs);
+        setHabits(habs);
         if (!Array.isArray(data)) {
           setTodayMood(data.mood || null);
           setTodayPageId(data.todayPageId || null);
@@ -113,9 +108,15 @@ export default function App() {
     const habit = habits.find(h => h.id === id);
     if (!habit || !habit.pageId) return showToast('Cannot update habit (no pageId)', 'error');
     const today = todayStr();
-    const wasDone = !!habit.history[today];
+    const wasDone = habit.history.find(h => h.date === today)?.done || false;
     const newDone = !wasDone;
-    setHabits((prev) => prev.map((h) => h.id === id ? { ...h, history: { ...h.history, [today]: newDone }, streak: newDone ? h.streak + 1 : Math.max(0, h.streak - 1) } : h));
+    setHabits((prev) => prev.map((h) => h.id === id ? { 
+      ...h, 
+      history: h.history.map(hi => hi.date === today ? { ...hi, done: newDone } : hi),
+      heatmapHistory: h.heatmapHistory?.map(hi => hi.date === today ? { ...hi, done: newDone } : hi),
+      done: newDone,
+      streak: newDone ? h.streak + 1 : Math.max(0, h.streak - 1) 
+    } : h));
     try {
       const res = await fetch(`/api/habits/${encodeURIComponent(id)}`, {
         method: 'PATCH',
@@ -125,16 +126,22 @@ export default function App() {
       if (!res.ok) throw new Error();
     } catch (e) {
       showToast('Failed to update habit', 'error');
-      setHabits((prev) => prev.map((h) => h.id === id ? { ...h, history: { ...h.history, [today]: wasDone }, streak: wasDone ? h.streak + 1 : Math.max(0, h.streak - 1) } : h));
+      setHabits((prev) => prev.map((h) => h.id === id ? { 
+        ...h, 
+        history: h.history.map(hi => hi.date === today ? { ...hi, done: wasDone } : hi),
+        heatmapHistory: h.heatmapHistory?.map(hi => hi.date === today ? { ...hi, done: wasDone } : hi),
+        done: wasDone,
+        streak: wasDone ? h.streak + 1 : Math.max(0, h.streak - 1) 
+      } : h));
     }
   };
 
-  const addHabit = async (name: string) => {
+  const addHabit = async (name: string, category?: string, time?: string, icon?: string) => {
     const trimmed = name.trim();
-    const temp: Habit = { id: trimmed, name: trimmed, streak: 0, pageId: habits.length && habits[0].pageId ? habits[0].pageId : undefined, history: {}, weeklyRate: 0 };
+    const temp: Habit = { id: trimmed, name: trimmed, streak: 0, pageId: habits.length && habits[0].pageId ? habits[0].pageId : undefined, history: [], heatmapHistory: [], weeklyRate: 0, category: category || 'Other', time: time || 'Anytime', icon: icon || '◈' };
     setHabits(p => [temp, ...p]);
     try {
-      const res = await fetch('/api/habits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: trimmed }) });
+      const res = await fetch('/api/habits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: trimmed, category, time, icon }) });
       if (res.ok) { showToast('Habit added', 'success'); setTimeout(fetchData, 2500); } else throw new Error();
     } catch (e) { showToast('Failed to add habit', 'error'); setHabits(p => p.filter(h => h.id !== trimmed)); }
   };

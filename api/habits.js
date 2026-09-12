@@ -14,15 +14,28 @@ module.exports = async function handler(req, res) {
 
     if (req.method === 'POST') {
         try {
-            const { name } = req.body;
+            const { name, category = 'Other', time = 'Anytime', icon = '◈' } = req.body;
             if (!name || typeof name !== 'string') return res.status(400).json({ error: 'Invalid name' });
 
-            await withRetry(() => notion.databases.update({
-                database_id: process.env.HABIT_DB_ID,
-                properties: {
-                    [name.trim()]: { checkbox: {} }
-                }
-            }));
+            const trimmed = name.trim();
+
+            await Promise.all([
+                withRetry(() => notion.databases.update({
+                    database_id: process.env.HABIT_DB_ID,
+                    properties: {
+                        [trimmed]: { checkbox: {} }
+                    }
+                })),
+                process.env.HABIT_META_DB_ID ? withRetry(() => notion.pages.create({
+                    parent: { database_id: process.env.HABIT_META_DB_ID },
+                    properties: {
+                        Name: { title: [{ text: { content: trimmed } }] },
+                        Category: { select: { name: category } },
+                        Time: { select: { name: time } },
+                        Icon: { rich_text: [{ text: { content: icon } }] }
+                    }
+                })).catch(e => console.error("Failed to add to meta DB", e)) : Promise.resolve()
+            ]);
             
             invalidateCache('habits_list');
             return res.status(200).json({ success: true });
@@ -35,15 +48,19 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
         try {
             const databaseId = process.env.HABIT_DB_ID;
+            const metaDatabaseId = process.env.HABIT_META_DB_ID;
 
-            // Fetch database schema AND rows in parallel
-            const [dbSchema, response] = await Promise.all([
+            // Fetch database schema, rows, and metadata in parallel
+            const [dbSchema, response, metaResponse] = await Promise.all([
                 withRetry(() => notion.databases.retrieve({ database_id: databaseId })),
                 withRetry(() => notion.databases.query({
                     database_id: databaseId,
                     sorts: [{ property: 'date', direction: 'descending' }],
                     page_size: 30
-                }))
+                })),
+                metaDatabaseId ? withRetry(() => notion.databases.query({
+                    database_id: metaDatabaseId
+                })).catch(() => ({ results: [] })) : { results: [] }
             ]);
 
             if (!response.results || response.results.length === 0) {
@@ -64,33 +81,10 @@ module.exports = async function handler(req, res) {
                 response.results.unshift(todayPage);
             }
 
-            const moodExists = !!dbSchema.properties['Mood'];
-            if (!moodExists) {
-                try {
-                    await withRetry(() => notion.databases.update({
-                        database_id: databaseId,
-                        properties: {
-                            Mood: {
-                                select: {
-                                    options: [
-                                        { name: "Awesome", color: "green" },
-                                        { name: "Good", color: "blue" },
-                                        { name: "Okay", color: "yellow" },
-                                        { name: "Bad", color: "red" }
-                                    ]
-                                }
-                            }
-                        }
-                    }));
-                } catch (e) {
-                    console.error("Error adding Mood property", e);
-                }
-            }
-
             const todayMood = todayPage?.properties?.Mood?.select?.name || null;
             const todayPageId = todayPage?.id || null;
 
-            // Use the DATABASE SCHEMA to get ALL checkbox habits (never misses any)
+            // Use the DATABASE SCHEMA to get ALL checkbox habits
             const habitsList = Object.keys(dbSchema.properties)
                 .filter(p => dbSchema.properties[p].type === 'checkbox');
             
@@ -100,11 +94,33 @@ module.exports = async function handler(req, res) {
                 const d = p.properties.date?.date?.start;
                 if (d) pageByDate[d] = p;
             });
+            
+            // Build metadata lookup
+            const metaMap = {};
+            if (metaResponse.results) {
+                metaResponse.results.forEach(page => {
+                    const name = page.properties.Name?.title?.[0]?.plain_text;
+                    if (name) {
+                        metaMap[name] = {
+                            category: page.properties.Category?.select?.name || 'Other',
+                            time: page.properties.Time?.select?.name || 'Anytime',
+                            icon: page.properties.Icon?.rich_text?.[0]?.plain_text || '◈'
+                        };
+                    }
+                });
+            }
 
             // Generate last 14 days (oldest first)
             const last14 = Array.from({ length: 14 }, (_, i) => {
                 const d = new Date();
                 d.setDate(d.getDate() - (13 - i));
+                return d.toISOString().split('T')[0];
+            });
+            
+            // Generate last 28 days for heatmap
+            const last28 = Array.from({ length: 28 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (27 - i));
                 return d.toISOString().split('T')[0];
             });
 
@@ -121,16 +137,24 @@ module.exports = async function handler(req, res) {
                     }
                 }
 
-                // Per-day history for heatmap
+                // Per-day history (14 days for the dot list)
                 const history = last14.map(date => ({
                     date,
                     done: !!(pageByDate[date]?.properties[habit]?.checkbox)
                 }));
+                
+                // 28 days history for heatmap
+                const heatmapHistory = last28.map(date => ({
+                    date,
+                    done: !!(pageByDate[date]?.properties[habit]?.checkbox)
+                }));
 
-                // Weekly completion rate (last 7 days, excluding today)
+                // Weekly completion rate (last 7 days)
                 const last7 = last14.slice(7);
-                const weeklyDone = last7.filter(d => pageByDate[d.date]?.properties[habit]?.checkbox).length;
+                const weeklyDone = last7.filter(d => d.done).length;
                 const weeklyRate = Math.round((weeklyDone / 7) * 100);
+                
+                const meta = metaMap[habit] || { category: 'Other', time: 'Anytime', icon: '◈' };
 
                 return {
                     id: habit,
@@ -139,7 +163,11 @@ module.exports = async function handler(req, res) {
                     streak,
                     pageId: todayPage ? todayPage.id : null,
                     history,
-                    weeklyRate
+                    heatmapHistory,
+                    weeklyRate,
+                    category: meta.category,
+                    time: meta.time,
+                    icon: meta.icon
                 };
             });
 
