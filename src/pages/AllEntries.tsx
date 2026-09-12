@@ -7,6 +7,7 @@ interface Props {
   onDelete: (id: string) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
   activeCat: string;
+  metadata: { categories: {id:string, name:string}[], accounts: {id:string, name:string}[] } | null;
 }
 
 const fmt = (n: number) =>
@@ -19,7 +20,7 @@ type Filter = "all" | "Income" | "Expense";
 type SortKey = "date" | "amount" | "name";
 type SortDir = "asc" | "desc";
 
-export default function AllEntries({ transactions, onAdd, onDelete, showToast, activeCat }: Props) {
+export default function AllEntries({ transactions, onAdd, onDelete, showToast, activeCat, metadata }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
@@ -94,8 +95,8 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
               <input className="input" type="date" value={date} onChange={e=>setDate(e.target.value)} required/>
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.65rem" }}>
-              <select className="input" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Category…</option>{CATEGORIES.map(c=><option key={c} value={c}>{CAT_ICON[c]} {c}</option>)}</select>
-              <select className="input" value={account} onChange={e=>setAccount(e.target.value)}><option value="">Account…</option>{ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}</select>
+              <select className="input" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Category…</option>{metadata ? metadata.categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>) : CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
+              <select className="input" value={account} onChange={e=>setAccount(e.target.value)}><option value="">Account…</option>{metadata ? metadata.accounts.map(a=><option key={a.id} value={a.name}>{a.name}</option>) : ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}</select>
             </div>
             <button type="submit" className={`btn ${txType==="Income"?"btn-success":"btn-danger"}`} style={{width:"100%",justifyContent:"center"}}>{txType==="Expense"?"Record Expense":"Record Income"} →</button>
           </form>
