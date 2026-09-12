@@ -95,7 +95,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
   }));
 
   const recentTxns = useMemo(
-    () => [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7),
+    () => [...transactions].sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 7),
     [transactions]
   );
 

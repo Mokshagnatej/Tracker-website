@@ -40,9 +40,9 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
     }
     list = [...list].sort((a, b) => {
       let v = 0;
-      if (sortKey === "date") v = a.date.localeCompare(b.date);
+      if (sortKey === "date") v = (a.date || "").localeCompare(b.date || "");
       else if (sortKey === "amount") v = a.amount - b.amount;
-      else v = a.name.localeCompare(b.name);
+      else v = (a.name || "").localeCompare(b.name || "");
       return sortDir === "asc" ? v : -v;
     });
     return list;
