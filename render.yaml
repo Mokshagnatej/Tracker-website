@@ -19,3 +19,5 @@ services:
         sync: false
       - key: MONTH_DB_ID
         sync: false
+      - key: HABIT_META_DB_ID
+        sync: false
