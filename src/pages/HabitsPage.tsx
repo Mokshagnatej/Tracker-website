@@ -84,101 +84,104 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
   const filteredHabits = filter === "All" ? habits : habits.filter(h => h.category === filter);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-20 font-sans text-gray-900 bg-[#f4f4f2] min-h-screen">
+    <div className="w-full space-y-6 pb-20 font-sans text-gray-900">
       
       {/* Header */}
-      <header className="flex justify-between items-end mb-8 pt-4">
+      <header className="flex justify-between items-end mb-8">
         <div>
           <h1 className="text-[32px] font-bold tracking-tight text-gray-900 leading-none mb-2">Habits</h1>
           <p className="text-[15px] text-gray-500">{dateString}</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#111] text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-black transition-colors flex items-center gap-2"
+          className="bg-[#111] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-black transition-colors flex items-center gap-2"
         >
           <span>+</span> New Habit
         </button>
       </header>
 
-      {/* Top Section */}
-      <div className="flex flex-col lg:flex-row gap-6">
-        
-        {/* Main Stats Card */}
-        <div className="lg:w-2/3 bg-white rounded-3xl border border-[#e5e7eb] p-8 flex flex-col sm:flex-row gap-8 items-center shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-          {/* Circular Progress */}
-          <div className="relative w-44 h-44 flex items-center justify-center flex-shrink-0">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="8" />
-              <circle 
-                cx="50" cy="50" r="44" fill="none" stroke="url(#progressLight)" strokeWidth="8" 
-                strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 44}`}
-                strokeDashoffset={`${2 * Math.PI * 44 * (1 - progressPercent / 100)}`}
-                className="transition-all duration-1000 ease-out"
-              />
-              <defs>
-                <linearGradient id="progressLight" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#0ea5e9" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="absolute text-center flex flex-col items-center">
-              <span className="text-[34px] font-bold tracking-tight text-gray-900 leading-none">{progressPercent}%</span>
-              <span className="text-[11px] font-medium text-gray-400 mt-1.5">{doneTodayCount} of {total} done</span>
-            </div>
-          </div>
-
-          {/* 2x2 Grid */}
-          <div className="flex-1 w-full grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-              <div className="text-xl mb-2">🔥</div>
-              <div className="text-[22px] font-bold text-orange-500 leading-none">{bestStreak}d</div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Best Streak</div>
-            </div>
-            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-              <div className="text-xl mb-2 text-gray-400">◎</div>
-              <div className="text-[22px] font-bold text-blue-500 leading-none">{total}</div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Active Habits</div>
-            </div>
-            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-              <div className="text-xl mb-2 text-yellow-400">⭐</div>
-              <div className="text-[22px] font-bold text-purple-600 leading-none">{perfectDays}</div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Perfect Days</div>
-            </div>
-            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-              <div className="text-xl mb-2 text-green-500">📈</div>
-              <div className="text-[22px] font-bold text-emerald-500 leading-none">{avgMonthlyRate}%</div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Monthly Rate</div>
-            </div>
+      {/* Main Stats Card */}
+      <div className="bg-white rounded-3xl border border-[#e5e7eb] p-8 flex flex-col md:flex-row gap-8 items-center shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+        {/* Circular Progress */}
+        <div className="relative w-44 h-44 flex items-center justify-center flex-shrink-0 md:w-1/3">
+          <svg className="w-44 h-44 transform -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="8" />
+            <circle 
+              cx="50" cy="50" r="44" fill="none" stroke="url(#progressLight)" strokeWidth="8" 
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 44}`}
+              strokeDashoffset={`${2 * Math.PI * 44 * (1 - progressPercent / 100)}`}
+              className="transition-all duration-1000 ease-out"
+            />
+            <defs>
+              <linearGradient id="progressLight" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#0ea5e9" />
+                <stop offset="100%" stopColor="#8b5cf6" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div className="absolute text-center flex flex-col items-center">
+            <span className="text-[34px] font-bold tracking-tight text-gray-900 leading-none">{progressPercent}%</span>
+            <span className="text-[11px] font-medium text-gray-400 mt-1.5">{doneTodayCount} of {total} done</span>
           </div>
         </div>
 
-        {/* Category Progress Card */}
-        <div className="lg:w-1/3 bg-white rounded-3xl border border-[#e5e7eb] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-          <h3 className="text-[15px] font-bold text-gray-900 mb-6">Category Progress</h3>
-          <div className="space-y-4">
-            {catProgress.map(c => {
-              const theme = getTheme(c.name);
-              const pct = c.total > 0 ? (c.done / c.total) * 100 : 0;
-              return (
-                <div key={c.name}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[12px] font-medium" style={{ color: theme.color }}>{c.name}</span>
-                    <span className="text-[12px] text-gray-500">{c.done}/{c.total}</span>
-                  </div>
-                  <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-500" 
-                      style={{ width: `${pct}%`, backgroundColor: theme.color }}
-                    />
-                  </div>
+        {/* 2x2 Grid */}
+        <div className="flex-1 w-full grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">🔥</span>
+              <span className="text-[22px] font-bold text-orange-500 leading-none">{bestStreak}d</span>
+            </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Best Streak</div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl text-gray-400">◎</span>
+              <span className="text-[22px] font-bold text-blue-500 leading-none">{total}</span>
+            </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Active Habits</div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl text-yellow-400">⭐</span>
+              <span className="text-[22px] font-bold text-purple-600 leading-none">{perfectDays}</span>
+            </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Perfect Days</div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl text-green-500">📈</span>
+              <span className="text-[22px] font-bold text-emerald-500 leading-none">{avgMonthlyRate}%</span>
+            </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Monthly Rate</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Progress Card */}
+      <div className="bg-white rounded-3xl border border-[#e5e7eb] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+        <h3 className="text-[15px] font-bold text-gray-900 mb-6">Category Progress</h3>
+        <div className="space-y-4">
+          {catProgress.map(c => {
+            const theme = getTheme(c.name);
+            const pct = c.total > 0 ? (c.done / c.total) * 100 : 0;
+            return (
+              <div key={c.name}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[12px] font-medium" style={{ color: theme.color }}>{c.name}</span>
+                  <span className="text-[12px] text-gray-500">{c.done}/{c.total}</span>
                 </div>
-              )
-            })}
-          </div>
+                <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${pct}%`, backgroundColor: theme.color }}
+                  />
+                </div>
+              </div>
+            )
+          })}
         </div>
-
       </div>
 
       {/* Middle Charts Section */}
@@ -231,27 +234,27 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
       </div>
 
       {/* Heatmap Section */}
-      <div className="bg-white rounded-3xl border border-[#e5e7eb] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+      <div className="bg-white rounded-3xl border border-[#e5e7eb] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)] w-full overflow-hidden">
         <h3 className="text-[15px] font-bold text-gray-900 mb-1">28-Day Heatmap</h3>
         <p className="text-[13px] text-gray-400 mb-6">Daily habit completion per habit</p>
         
-        <div className="overflow-x-auto pb-4 custom-scrollbar">
+        <div className="overflow-x-auto pb-4">
           <div className="min-w-max">
             {habits.map(h => {
               const theme = getTheme(h.category);
               return (
                 <div key={h.id} className="flex items-center gap-3 mb-2.5">
-                  <div className="w-36 flex items-center gap-2 text-[13px] font-medium text-gray-600 truncate">
-                    <span>{h.icon}</span> {h.name}
+                  <div className="w-40 flex items-center gap-2 text-[13px] font-medium text-gray-600 truncate flex-shrink-0">
+                    <span className="text-base">{h.icon}</span> <span className="truncate">{h.name}</span>
                   </div>
-                  <div className="flex gap-1.5 flex-1">
-                    {h.heatmapHistory && [...h.heatmapHistory].reverse().map((day, i) => {
+                  <div className="flex gap-1.5">
+                    {h.heatmapHistory && h.heatmapHistory.map((day, i) => {
                       const isToday = i === h.heatmapHistory!.length - 1;
                       return (
                         <div 
                           key={day.date} 
                           title={day.date}
-                          className={`w-[14px] h-[14px] rounded-[4px] border transition-colors ${
+                          className={`w-[14px] h-[14px] flex-shrink-0 rounded-[4px] border transition-colors ${
                             day.done 
                               ? `border-transparent`
                               : isToday ? 'border-gray-300 bg-white' : 'border-transparent bg-gray-100'
@@ -285,10 +288,7 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
           >
             All
           </button>
-          {Object.keys(CAT_THEME).map(cat => {
-            if (cat === "Other" && !habits.some(h => h.category === "Other")) return null;
-            if (!habits.some(h => h.category === cat)) return null;
-            
+          {Array.from(new Set(habits.map(h => h.category || "Other"))).map(cat => {
             const theme = getTheme(cat);
             return (
               <button 
@@ -342,7 +342,7 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
                             return (
                               <div 
                                 key={idx} 
-                                className={`w-[8px] h-[8px] rounded-full border ${day.done ? 'border-transparent' : isCurrentDay ? 'border-gray-300' : 'border-gray-200'}`}
+                                className={`w-[8px] h-[8px] flex-shrink-0 rounded-full border ${day.done ? 'border-transparent' : isCurrentDay ? 'border-gray-300' : 'border-gray-200'}`}
                                 style={day.done ? { backgroundColor: theme.color } : {}}
                               />
                             )
