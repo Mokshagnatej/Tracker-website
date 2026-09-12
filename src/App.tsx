@@ -215,9 +215,15 @@ export default function App() {
           <div className={`cat-item ${activeCat === "all" ? "active" : ""}`} onClick={() => setActiveCat("all")}>
             <span className="cat-name" style={{ fontWeight: activeCat === "all" ? 600 : 400 }}>All categories</span>
           </div>
-          {CATEGORIES.filter((c) => catCounts[c]).map((cat) => (
+          {metadata ? metadata.categories.filter((c) => catCounts[c.name]).map((cat) => (
+            <div key={cat.id} className={`cat-item ${activeCat === cat.name ? "active" : ""}`} onClick={() => setActiveCat(cat.name)}>
+              <span className="cat-dot" style={{ background: CAT_DOT[cat.name] || "#94a3b8" }} />
+              <span className="cat-name">{cat.name}</span>
+              <span className="cat-count">{catCounts[cat.name]}</span>
+            </div>
+          )) : CATEGORIES.filter((c) => catCounts[c]).map((cat) => (
             <div key={cat} className={`cat-item ${activeCat === cat ? "active" : ""}`} onClick={() => setActiveCat(cat)}>
-              <span className="cat-dot" style={{ background: CAT_DOT[cat] }} />
+              <span className="cat-dot" style={{ background: CAT_DOT[cat] || "#94a3b8" }} />
               <span className="cat-name">{cat}</span>
               <span className="cat-count">{catCounts[cat]}</span>
             </div>
@@ -236,7 +242,7 @@ export default function App() {
         ) : page === "dashboard" ? (
           <Dashboard transactions={filteredTransactions} catTotals={catTotals} catCounts={catCounts} />
         ) : page === "entries" ? (
-          <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} />
+          <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} metadata={metadata} />
         ) : (
           <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} showToast={showToast} todayMood={todayMood} onUpdateMood={updateMood} />
         )}
