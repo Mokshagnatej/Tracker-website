@@ -124,7 +124,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
         <span style={{ fontSize:"0.78rem",color:"var(--text-3)",whiteSpace:"nowrap" }}>{filtered.length} entries</span>
       </div>
 
-      <div className="card table-scroll" style={{ padding:0,overflow:"hidden" }}>
+      <div className="card table-scroll" style={{ padding:0 }}>
         {filtered.length===0?(
           <div style={{padding:"3rem",textAlign:"center",color:"var(--text-3)",fontSize:"0.875rem"}}>{search?`No results for "${search}"`:'No transactions found.'}</div>
         ):(
