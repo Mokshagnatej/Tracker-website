@@ -345,6 +345,7 @@ export default function ExpensesPage({ transactions, categories, accounts, onAdd
                     </div>
                     <button
                       onClick={() => { onDelete(t.id); showToast("Removed", "error"); }}
+                      className="mobile-visible"
                       style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", color: "var(--text-4)", transition: "color 0.15s", fontFamily: "var(--ff-body)", padding: "2px 0", marginTop: 2, opacity: 0 }}
                       onMouseOver={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--red)"; }}
                       onMouseOut={(e) => { e.currentTarget.style.opacity = "0"; }}

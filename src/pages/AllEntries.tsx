@@ -72,7 +72,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
 
   return (
     <div>
-      <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:"1.75rem" }}>
+      <div className="page-header-row" style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:"1.75rem" }}>
         <div>
           <h1 className="page-title">All Entries</h1>
           <p className="page-sub" style={{ marginBottom: 0 }}>{activeCat==="all"?"Every transaction in your workspace.":`Filtered by: ${activeCat}`}</p>
@@ -124,7 +124,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
         <span style={{ fontSize:"0.78rem",color:"var(--text-3)",whiteSpace:"nowrap" }}>{filtered.length} entries</span>
       </div>
 
-      <div className="card" style={{ padding:0,overflow:"hidden" }}>
+      <div className="card table-scroll" style={{ padding:0,overflow:"hidden" }}>
         {filtered.length===0?(
           <div style={{padding:"3rem",textAlign:"center",color:"var(--text-3)",fontSize:"0.875rem"}}>{search?`No results for "${search}"`:'No transactions found.'}</div>
         ):(

@@ -109,7 +109,7 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", color: "#111" }}>
 
       {/* ── HEADER ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
+      <div className="page-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 30, fontWeight: 700, margin: 0, letterSpacing: "-0.03em" }}>Habits</h1>
           <p style={{ fontSize: 14, color: "#9ca3af", margin: "4px 0 0" }}>{dateStr}</p>
@@ -123,7 +123,7 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
       </div>
 
       {/* ── TOP ROW: Circle + 2×2 stats ── */}
-      <div style={{ ...card, display: "flex", gap: 32, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+      <div className="habits-hero" style={{ ...card, display: "flex", gap: 32, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
         {/* circle */}
         <div style={{ position: "relative", width: 170, height: 170, flexShrink: 0 }}>
           <svg width="170" height="170" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
@@ -188,7 +188,7 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
       </div>
 
       {/* ── CHARTS ROW ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+      <div className="habits-charts-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
         {/* 14-Day Trend */}
         <div style={card}>
           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>14-Day Trend</h3>
@@ -243,17 +243,18 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
             const th = ct(h.category);
             return (
               <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <div style={{ width: 140, display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500, color: "#4b5563", flexShrink: 0, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                <div className="heatmap-name" style={{ width: 140, display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500, color: "#4b5563", flexShrink: 0, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                   <span style={{ fontSize: 15 }}>{h.icon}</span>
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</span>
                 </div>
-                <div style={{ display: "flex", gap: 4 }}>
+                <div className="heatmap-gap" style={{ display: "flex", gap: 4 }}>
                   {(h.heatmapHistory || []).map((day, i) => {
                     const isToday = i === (h.heatmapHistory?.length || 0) - 1;
                     return (
                       <div
                         key={day.date}
                         title={day.date}
+                        className="heatmap-cell"
                         style={{
                           width: 14, height: 14, borderRadius: 3, flexShrink: 0,
                           background: day.done ? th.color : isToday ? "#fff" : "#f3f4f6",
@@ -309,7 +310,7 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
                     {h.icon}
                   </div>
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div className="habit-details" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <span style={{ fontSize: 15, fontWeight: 500 }}>{h.name}</span>
                       <span style={{ fontSize: 11, fontWeight: 600, color: th.color, background: th.bg, padding: "2px 8px", borderRadius: 4, border: `1px solid ${th.border}` }}>{h.category}</span>
                       <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center", gap: 3 }}>
@@ -381,7 +382,7 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
                   style={inputSt}
                 />
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="modal-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <label>
                   <div style={labelSt}>CATEGORY</div>
                   <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={inputSt}>

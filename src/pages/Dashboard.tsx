@@ -116,7 +116,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "0.35rem" }}>
+      <div className="dash-title-row" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "0.35rem" }}>
         <h1 className="page-title" style={{ marginBottom: 0 }}>Dashboard</h1>
         <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{transactions.length} total transactions</div>
       </div>
@@ -179,7 +179,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
             <div><div style={{ fontWeight: 600, fontSize: "1rem", color: "#111" }}>Spending trend</div><div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: 2 }}>30-day daily view</div></div>
             <div style={{ display: "flex", gap: "0.25rem" }}>
               {(["expense","income","net"] as TrendMode[]).map((m)=>(
-                <button key={m} onClick={()=>setTrendMode(m)} style={{ padding:"0.28rem 0.65rem",borderRadius:99,fontSize:"0.72rem",fontWeight:500,border:trendMode===m?"none":"1px solid #e6e6e3",background:trendMode===m?(m==="income"?"#f0fdf4":m==="net"?"#eff6ff":"#fff5f5"):"transparent",color:trendMode===m?(m==="income"?"#16a34a":m==="net"?"#2563eb":"#e8522a"):"#9ca3af",cursor:"pointer" }}>{m.charAt(0).toUpperCase()+m.slice(1)}</button>
+                <button key={m} className="trend-btn" onClick={()=>setTrendMode(m)} style={{ padding:"0.28rem 0.65rem",borderRadius:99,fontSize:"0.72rem",fontWeight:500,border:trendMode===m?"none":"1px solid #e6e6e3",background:trendMode===m?(m==="income"?"#f0fdf4":m==="net"?"#eff6ff":"#fff5f5"):"transparent",color:trendMode===m?(m==="income"?"#16a34a":m==="net"?"#2563eb":"#e8522a"):"#9ca3af",cursor:"pointer" }}>{m.charAt(0).toUpperCase()+m.slice(1)}</button>
               ))}
             </div>
           </div>
@@ -232,7 +232,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
         </div>
       </div>
 
-      <div style={{ display:"grid",gridTemplateColumns:"1fr 320px",gap:"1.1rem",marginBottom:"1.1rem" }}>
+      <div className="chart-row" style={{ marginBottom:"1.1rem" }}>
         {barData.length>0&&(
           <div className="card">
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1.1rem" }}>
