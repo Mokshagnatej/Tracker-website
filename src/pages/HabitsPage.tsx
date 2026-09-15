@@ -9,9 +9,9 @@ import {
 /* ── props ── */
 interface Props {
   habits: Habit[];
-  onToggle: (id: string) => void;
   onAdd: (name: string, category?: string, time?: string, icon?: string) => void;
   onDelete: (id: string) => void;
+  onUpdateMeta?: (id: string, category: string, time: string, icon: string) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
   todayMood?: string | null;
   onUpdateMood?: (mood: string) => void;
@@ -38,11 +38,12 @@ const card: React.CSSProperties = {
   padding: 24,
 };
 
-/* ════════════════════════════════════════════ */
-export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props) {
+export default function HabitsPage({ habits, onToggle, onAdd, onDelete, onUpdateMeta }: Props) {
   const [filter, setFilter] = useState("All");
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name: "", category: "Mindfulness", time: "Morning", icon: "🧘‍♀️" });
+  const [editingHabit, setEditingHabit] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ category: "Mindfulness", time: "Morning", icon: "🧘‍♀️" });
 
   const dateStr = new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" });
 
@@ -102,6 +103,13 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
     onAdd(form.name.trim(), form.category, form.time, form.icon);
     setModal(false);
     setForm({ name: "", category: "Mindfulness", time: "Morning", icon: "🧘‍♀️" });
+  };
+
+  const handleEditSubmit = (id: string) => {
+    if (onUpdateMeta) {
+      onUpdateMeta(id, editForm.category, editForm.time, editForm.icon);
+    }
+    setEditingHabit(null);
   };
 
   /* ═══════════════  RENDER  ═══════════════ */
@@ -296,16 +304,26 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
           filtered.map((h, i) => {
             const th = ct(h.category);
             return (
+              <div key={h.id}>
               <div
-                key={h.id}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   padding: "14px 0",
-                  borderBottom: i < filtered.length - 1 ? "1px solid #f3f4f6" : "none",
+                  borderBottom: i < filtered.length - 1 && editingHabit !== h.id ? "1px solid #f3f4f6" : "none",
                 }}
               >
                 {/* left */}
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div 
+                  style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer", flex: 1 }}
+                  onClick={() => {
+                    if (editingHabit === h.id) {
+                      setEditingHabit(null);
+                    } else {
+                      setEditForm({ category: h.category || "Other", time: h.time || "Anytime", icon: h.icon || "◈" });
+                      setEditingHabit(h.id);
+                    }
+                  }}
+                >
                   <div style={{ width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, background: th.bg, border: `1px solid ${th.border}` }}>
                     {h.icon}
                   </div>
@@ -361,6 +379,37 @@ export default function HabitsPage({ habits, onToggle, onAdd, onDelete }: Props)
                     )}
                   </button>
                 </div>
+              </div>
+              
+              {/* Inline Edit Form */}
+              {editingHabit === h.id && (
+                <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, marginTop: -8, marginBottom: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Edit Habit Meta</div>
+                  <div className="modal-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                    <label>
+                      <div style={labelSt}>CATEGORY</div>
+                      <select value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} style={{ ...inputSt, padding: "8px 10px", fontSize: 13 }}>
+                        {Object.keys(CAT).map((c) => <option key={c}>{c}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      <div style={labelSt}>TIME</div>
+                      <select value={editForm.time} onChange={(e) => setEditForm({ ...editForm, time: e.target.value })} style={{ ...inputSt, padding: "8px 10px", fontSize: 13 }}>
+                        <option>Morning</option><option>Evening</option><option>Anytime</option>
+                      </select>
+                    </label>
+                    <label>
+                      <div style={labelSt}>ICON</div>
+                      <input type="text" maxLength={5} value={editForm.icon} onChange={(e) => setEditForm({ ...editForm, icon: e.target.value })} style={{ ...inputSt, padding: "8px 10px", fontSize: 16, textAlign: "center" }} />
+                    </label>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <button onClick={() => setEditingHabit(null)} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 500, color: "#9ca3af", cursor: "pointer", padding: "6px 12px" }}>Cancel</button>
+                    <button onClick={() => handleEditSubmit(h.id)} style={{ background: "#111", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Save</button>
+                  </div>
+                </div>
+              )}
+              
               </div>
             );
           })

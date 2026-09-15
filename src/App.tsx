@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import AllEntries from "./pages/AllEntries";
 import HabitsPage from "./pages/HabitsPage";
 import ToastContainer, { ToastMessage } from "./components/Toast";
+import PullToRefresh from "./components/PullToRefresh";
 
 type Page = "dashboard" | "entries" | "habits";
 
@@ -146,6 +147,28 @@ export default function App() {
     } catch (e) { showToast('Failed to add habit', 'error'); setHabits(p => p.filter(h => h.id !== trimmed)); }
   };
 
+  const updateHabitMeta = async (id: string, category: string, time: string, icon: string) => {
+    // Optimistic update
+    const oldHabits = [...habits];
+    setHabits(prev => prev.map(h => h.id === id ? { ...h, category, time, icon } : h));
+    
+    try {
+      const res = await fetch(`/api/habits/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, time, icon })
+      });
+      if (res.ok) {
+        showToast('Habit updated', 'success');
+      } else {
+        throw new Error();
+      }
+    } catch (e) {
+      showToast('Failed to update habit', 'error');
+      setHabits(oldHabits); // Rollback on error
+    }
+  };
+
   const deleteHabit = async (id: string) => {
     const prevHabs = [...habits];
     setHabits(p => p.filter(h => h.id !== id));
@@ -237,15 +260,17 @@ export default function App() {
       </aside>
 
       <main className="main-area">
-        {loading && transactions.length === 0 && habits.length === 0 ? (
-          <div style={{ padding: "4rem", textAlign: "center", color: "var(--text-4)" }}>Syncing with Notion...</div>
-        ) : page === "dashboard" ? (
-          <Dashboard transactions={filteredTransactions} catTotals={catTotals} catCounts={catCounts} />
-        ) : page === "entries" ? (
-          <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} metadata={metadata} />
-        ) : (
-          <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} showToast={showToast} todayMood={todayMood} onUpdateMood={updateMood} />
-        )}
+        <PullToRefresh onRefresh={fetchData}>
+          {loading && transactions.length === 0 && habits.length === 0 ? (
+            <div style={{ padding: "4rem", textAlign: "center", color: "var(--text-4)" }}>Syncing with Notion...</div>
+          ) : page === "dashboard" ? (
+            <Dashboard transactions={filteredTransactions} catTotals={catTotals} catCounts={catCounts} />
+          ) : page === "entries" ? (
+            <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} metadata={metadata} />
+          ) : (
+            <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} onUpdateMeta={updateHabitMeta} showToast={showToast} todayMood={todayMood} onUpdateMood={updateMood} />
+          )}
+        </PullToRefresh>
       </main>
 
       <nav className="bottom-nav">

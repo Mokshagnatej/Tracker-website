@@ -53,5 +53,58 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    if (req.method === 'PUT') {
+        try {
+            const habitName = decodeURIComponent(req.query.id || (req.params && req.params.id));
+            const { category, time, icon } = req.body;
+
+            if (!habitName) {
+                return res.status(400).json({ error: 'Missing habit name' });
+            }
+
+            const metaDatabaseId = process.env.HABIT_META_DB_ID;
+            if (!metaDatabaseId) {
+                return res.status(400).json({ error: 'HABIT_META_DB_ID not configured' });
+            }
+
+            // Find existing meta page for this habit
+            const searchRes = await withRetry(() => notion.databases.query({
+                database_id: metaDatabaseId,
+                filter: {
+                    property: 'Name',
+                    title: { equals: habitName }
+                }
+            }));
+
+            const properties = {};
+            if (category) properties.Category = { select: { name: category } };
+            if (time) properties.Time = { select: { name: time } };
+            if (icon) properties.Icon = { rich_text: [{ text: { content: icon } }] };
+
+            if (searchRes.results.length > 0) {
+                // Update existing meta page
+                await withRetry(() => notion.pages.update({
+                    page_id: searchRes.results[0].id,
+                    properties
+                }));
+            } else {
+                // Create new meta page if none exists
+                await withRetry(() => notion.pages.create({
+                    parent: { database_id: metaDatabaseId },
+                    properties: {
+                        Name: { title: [{ text: { content: habitName } }] },
+                        ...properties
+                    }
+                }));
+            }
+
+            invalidateCache('habits_list');
+            return res.status(200).json({ success: true });
+        } catch (error) {
+            console.error('Error updating habit metadata:', error);
+            return res.status(500).json({ error: 'Failed to update habit metadata' });
+        }
+    }
+
     return res.status(405).json({ error: 'Method Not Allowed' });
 };
