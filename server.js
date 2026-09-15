@@ -9,6 +9,12 @@ dotenv.config(); // also check .env as fallback
 const app = express();
 app.use(express.json());
 
+// Log all requests for debugging
+app.use((req, res, next) => {
+    console.log(`[REQ] ${req.method} ${req.url}`);
+    next();
+});
+
 // API routes
 app.all('/api/expenses', (req, res) => require('./api/expenses.js')(req, res));
 app.all('/api/expenses/:id', (req, res) => {

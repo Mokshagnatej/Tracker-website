@@ -161,10 +161,11 @@ export default function App() {
       if (res.ok) {
         showToast('Habit updated', 'success');
       } else {
-        throw new Error();
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
       }
-    } catch (e) {
-      showToast('Failed to update habit', 'error');
+    } catch (e: any) {
+      showToast(`Update failed: ${e.message}`, 'error');
       setHabits(oldHabits); // Rollback on error
     }
   };
