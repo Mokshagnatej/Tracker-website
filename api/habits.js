@@ -26,8 +26,8 @@ module.exports = async function handler(req, res) {
                         [trimmed]: { checkbox: {} }
                     }
                 })),
-                process.env.HABIT_META_DB_ID ? withRetry(() => notion.pages.create({
-                    parent: { database_id: process.env.HABIT_META_DB_ID },
+                (process.env.HABIT_META_DB_ID || '3d98685bcf3380bb9807fd4d299301b7') ? withRetry(() => notion.pages.create({
+                    parent: { database_id: (process.env.HABIT_META_DB_ID || '3d98685bcf3380bb9807fd4d299301b7') },
                     properties: {
                         Name: { title: [{ text: { content: trimmed } }] },
                         Category: { select: { name: category } },
@@ -48,7 +48,7 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
         try {
             const databaseId = process.env.HABIT_DB_ID;
-            const metaDatabaseId = process.env.HABIT_META_DB_ID;
+            const metaDatabaseId = process.env.HABIT_META_DB_ID || '3d98685bcf3380bb9807fd4d299301b7';
 
             // Fetch database schema, rows, and metadata in parallel
             const [dbSchema, response, metaResponse] = await Promise.all([
