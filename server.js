@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 
 // Load .env.local for local dev; on Render, env vars are set in the dashboard
-dotenv.config({ path: '.env.local' });
-dotenv.config(); // also check .env as fallback
+dotenv.config({ path: path.resolve(__dirname, '.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '.env') }); // also check .env as fallback
 
 const app = express();
 app.use(express.json());
