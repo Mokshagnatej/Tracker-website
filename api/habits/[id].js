@@ -62,6 +62,9 @@ module.exports = async function handler(req, res) {
                 return res.status(400).json({ error: 'Missing habit name' });
             }
 
+            // Force reload env vars in case the server wasn't restarted
+            require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env.local'), override: true });
+            
             const metaDatabaseId = process.env.HABIT_META_DB_ID;
             if (!metaDatabaseId) {
                 return res.status(400).json({ error: 'HABIT_META_DB_ID not configured' });
