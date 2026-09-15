@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
             // Force reload env vars in case the server wasn't restarted
             require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env.local'), override: true });
             
-            const metaDatabaseId = process.env.HABIT_META_DB_ID;
+            const metaDatabaseId = process.env.HABIT_META_DB_ID || '3d98685bcf3380bb9807fd4d299301b7';
             if (!metaDatabaseId) {
                 return res.status(400).json({ error: 'HABIT_META_DB_ID not configured' });
             }
