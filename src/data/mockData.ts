@@ -104,9 +104,9 @@ export const initialTransactions: Transaction[] = [
   { id: "20", name: "Bus pass",          amount: 280,   type: "Expense", category: "Transport",        account: "Cash",  date: dateStr(27) },
 ];
 
-const buildHistory = (streak: number, doneToday: boolean): Record<string, boolean> => {
-  const h: Record<string, boolean> = {};
-  for (let i = 0; i < 14; i++) h[dateStr(i)] = i === 0 ? doneToday : i <= streak;
+const buildHistory = (streak: number, doneToday: boolean): HabitHistory[] => {
+  const h: HabitHistory[] = [];
+  for (let i = 0; i < 14; i++) h.push({ date: dateStr(i), done: i === 0 ? doneToday : i <= streak });
   return h;
 };
 

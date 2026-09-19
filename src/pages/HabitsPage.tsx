@@ -9,6 +9,7 @@ import {
 /* ── props ── */
 interface Props {
   habits: Habit[];
+  onToggle: (id: string) => void;
   onAdd: (name: string, category?: string, time?: string, icon?: string) => void;
   onDelete: (id: string) => void;
   onUpdateMeta?: (id: string, category: string, time: string, icon: string) => void;
