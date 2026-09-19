@@ -114,77 +114,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
         </div>
       )}
 
-      {/* Account Balances */}
-      {transactions.length > 0 && (() => {
-        const ACCT_ICON: Record<string, string> = { HDFC: "🏦", SBI: "🏛", Paytm: "📱", Cash: "💵", GPay: "💳" };
-        const ACCT_COLOR: Record<string, string> = { HDFC: "#3b82f6", SBI: "#6366f1", Paytm: "#06b6d4", Cash: "#22c55e", GPay: "#f97316" };
-        const acctMap: Record<string, { income: number; expense: number }> = {};
-        transactions.forEach((t) => {
-          if (!acctMap[t.account]) acctMap[t.account] = { income: 0, expense: 0 };
-          if (t.type === "Income") acctMap[t.account].income += t.amount;
-          else acctMap[t.account].expense += t.amount;
-        });
-        const acctList = Object.entries(acctMap)
-          .map(([name, { income: inc, expense: exp }]) => ({ name, balance: inc - exp, income: inc, expense: exp }))
-          .sort((a, b) => b.balance - a.balance);
-        const totalBal = acctList.reduce((s, a) => s + a.balance, 0);
-        const maxAbs = Math.max(...acctList.map((a) => Math.abs(a.balance)), 1);
 
-        return (
-          <div className="card" style={{ marginBottom: "1rem", padding: "1.1rem 1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.85rem" }}>
-              <div style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#9ca3af" }}>Account Balances</div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                <span style={{ fontSize: "0.65rem", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>Total</span>
-                <span style={{ fontSize: "1rem", fontWeight: 700, color: totalBal >= 0 ? "#16a34a" : "#dc2626", letterSpacing: "-0.03em" }}>
-                  {totalBal >= 0 ? "+" : "−"}{fmtShort(Math.abs(totalBal))}
-                </span>
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-              {acctList.map((acct) => {
-                const barPct = maxAbs > 0 ? (Math.abs(acct.balance) / maxAbs) * 100 : 0;
-                const color = ACCT_COLOR[acct.name] || "#94a3b8";
-                const isPos = acct.balance >= 0;
-                return (
-                  <div key={acct.name}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{
-                          width: 30, height: 30, borderRadius: 8,
-                          background: `${color}12`, border: `1px solid ${color}22`,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: "0.9rem", flexShrink: 0,
-                        }}>
-                          {ACCT_ICON[acct.name] || "💳"}
-                        </span>
-                        <div>
-                          <div style={{ fontSize: "0.82rem", fontWeight: 500, color: "var(--text)" }}>{acct.name}</div>
-                          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.05rem" }}>
-                            <span style={{ fontSize: "0.62rem", color: "#16a34a", fontFamily: "monospace" }}>+{fmtShort(acct.income)}</span>
-                            <span style={{ fontSize: "0.62rem", color: "#dc2626", fontFamily: "monospace" }}>−{fmtShort(acct.expense)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: "0.92rem", fontWeight: 700, color: isPos ? "#16a34a" : "#dc2626", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
-                        {isPos ? "+" : "−"}{fmtShort(Math.abs(acct.balance))}
-                      </div>
-                    </div>
-                    <div className="pbar-track">
-                      <div className="pbar-fill" style={{
-                        width: `${barPct}%`,
-                        background: isPos
-                          ? `linear-gradient(90deg, ${color}, ${color}aa)`
-                          : `linear-gradient(90deg, #dc2626, #ef4444)`,
-                      }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
 
       <div style={{ display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"0.85rem",flexWrap:"wrap" }}>
         <div className="chips">{(["all","Income","Expense"] as const).map(f=>(<button key={f} onClick={()=>setFilter(f)} className={`chip${filter===f?" active":""}`}>{f==="all"?"All":f}</button>))}</div>

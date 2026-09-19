@@ -173,6 +173,79 @@ export default function Dashboard({ transactions, catTotals }: Props) {
         )}
       </div>
 
+      {/* Account Balances */}
+      {transactions.length > 0 && (() => {
+        const ACCT_ICON: Record<string, string> = { HDFC: "🏦", SBI: "🏛", Paytm: "📱", Cash: "💵", GPay: "💳" };
+        const ACCT_CLR: Record<string, string> = { HDFC: "#3b82f6", SBI: "#6366f1", Paytm: "#06b6d4", Cash: "#22c55e", GPay: "#f97316" };
+        const acctMap: Record<string, { income: number; expense: number }> = {};
+        transactions.forEach((t) => {
+          if (!acctMap[t.account]) acctMap[t.account] = { income: 0, expense: 0 };
+          if (t.type === "Income") acctMap[t.account].income += t.amount;
+          else acctMap[t.account].expense += t.amount;
+        });
+        const acctList = Object.entries(acctMap)
+          .map(([n, { income: inc, expense: exp }]) => ({ name: n, balance: inc - exp, income: inc, expense: exp }))
+          .sort((a, b) => b.balance - a.balance);
+        const totalBal = acctList.reduce((s, a) => s + a.balance, 0);
+        const maxAbs = Math.max(...acctList.map((a) => Math.abs(a.balance)), 1);
+
+        return (
+          <div className="card" style={{ marginBottom: "1.1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "#111" }}>Account Balances</div>
+                <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: 2 }}>{acctList.length} accounts tracked</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "0.68rem", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Total Balance</div>
+                <div style={{ fontSize: "1.15rem", fontWeight: 700, color: totalBal >= 0 ? "#16a34a" : "#dc2626", letterSpacing: "-0.03em" }}>
+                  {totalBal >= 0 ? "+" : "−"}{fmt(Math.abs(totalBal))}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" }}>
+              {acctList.map((acct) => {
+                const barPct = maxAbs > 0 ? (Math.abs(acct.balance) / maxAbs) * 100 : 0;
+                const color = ACCT_CLR[acct.name] || "#94a3b8";
+                const isPos = acct.balance >= 0;
+                return (
+                  <div key={acct.name} style={{ background: "#fafafa", border: "1px solid #f0f0ee", borderRadius: 12, padding: "0.85rem 1rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          background: `${color}12`, border: `1px solid ${color}20`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: "0.95rem", flexShrink: 0,
+                        }}>
+                          {ACCT_ICON[acct.name] || "💳"}
+                        </span>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#111" }}>{acct.name}</div>
+                      </div>
+                      <div style={{ fontSize: "1rem", fontWeight: 700, color: isPos ? "#16a34a" : "#dc2626", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                        {isPos ? "+" : "−"}{fmt(Math.abs(acct.balance))}
+                      </div>
+                    </div>
+                    <div className="pbar-track" style={{ marginBottom: "0.4rem" }}>
+                      <div className="pbar-fill" style={{
+                        width: `${barPct}%`,
+                        background: isPos
+                          ? `linear-gradient(90deg, ${color}, ${color}aa)`
+                          : "linear-gradient(90deg, #dc2626, #ef4444)",
+                      }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.65rem", color: "#9ca3af" }}>
+                      <span style={{ color: "#16a34a" }}>↑ {fmt(acct.income)}</span>
+                      <span style={{ color: "#dc2626" }}>↓ {fmt(acct.expense)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="chart-row" style={{ marginBottom: "1.1rem" }}>
         <div className="card">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.1rem" }}>
