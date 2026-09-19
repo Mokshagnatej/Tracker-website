@@ -28,6 +28,13 @@ const CAT_COLOR: Record<string, string> = {
   Rent: "#6366f1", Salary: "#22c55e", Freelance: "#3b82f6", Other: "#94a3b8",
 };
 
+const ACCT_ICON: Record<string, string> = {
+  HDFC: "🏦", SBI: "🏛", Paytm: "📱", Cash: "💵", GPay: "💳",
+};
+const ACCT_COLOR: Record<string, string> = {
+  HDFC: "#3b82f6", SBI: "#6366f1", Paytm: "#06b6d4", Cash: "#22c55e", GPay: "#f97316",
+};
+
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -90,6 +97,20 @@ export default function ExpensesPage({ transactions, categories, accounts, onAdd
     return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, [transactions]);
   const catTotal = catMap.reduce((s, [, v]) => s + v, 0);
+
+  const accountBalances = useMemo(() => {
+    const m: Record<string, { income: number; expense: number }> = {};
+    transactions.forEach((t) => {
+      if (!m[t.account]) m[t.account] = { income: 0, expense: 0 };
+      if (t.type === "Income") m[t.account].income += t.amount;
+      else m[t.account].expense += t.amount;
+    });
+    return Object.entries(m)
+      .map(([name, { income: inc, expense: exp }]) => ({ name, balance: inc - exp, income: inc, expense: exp }))
+      .sort((a, b) => b.balance - a.balance);
+  }, [transactions]);
+  const totalBalance = accountBalances.reduce((s, a) => s + a.balance, 0);
+  const maxAbsBalance = Math.max(...accountBalances.map((a) => Math.abs(a.balance)), 1);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,6 +233,79 @@ export default function ExpensesPage({ transactions, categories, accounts, onAdd
                   </div>
                   <div className="progress-track">
                     <div className="progress-fill" style={{ width: `${pct}%`, background: color, opacity: 0.75 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {accountBalances.length > 0 && (
+        <div className="card" style={{ padding: "1.5rem 1.5rem 1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.15rem" }}>
+            <div className="label">Account Balances</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span className="label" style={{ fontSize: "0.55rem" }}>Total</span>
+              <span
+                className="mono"
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  color: totalBalance >= 0 ? "var(--green)" : "var(--red)",
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                {totalBalance >= 0 ? "+" : "−"}{fmt(totalBalance)}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {accountBalances.map((acct) => {
+              const barPct = maxAbsBalance > 0 ? (Math.abs(acct.balance) / maxAbsBalance) * 100 : 0;
+              const color = ACCT_COLOR[acct.name] || "#94a3b8";
+              const isPositive = acct.balance >= 0;
+              return (
+                <div key={acct.name}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
+                      <span
+                        style={{
+                          width: 32, height: 32, borderRadius: "var(--r-sm)",
+                          background: `${color}15`, border: `0.5px solid ${color}30`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: "0.95rem", flexShrink: 0,
+                        }}
+                      >
+                        {ACCT_ICON[acct.name] || "💳"}
+                      </span>
+                      <div>
+                        <div style={{ fontSize: "0.82rem", fontWeight: 500, color: "var(--text-2)" }}>{acct.name}</div>
+                        <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.1rem" }}>
+                          <span style={{ fontSize: "0.6rem", color: "var(--green)", fontFamily: "var(--ff-mono)" }}>
+                            +{fmt(acct.income)}
+                          </span>
+                          <span style={{ fontSize: "0.6rem", color: "var(--red)", fontFamily: "var(--ff-mono)" }}>
+                            −{fmt(acct.expense)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mono" style={{ fontSize: "0.95rem", fontWeight: 600, color: isPositive ? "var(--green)" : "var(--red)", letterSpacing: "-0.02em" }}>
+                      {isPositive ? "+" : "−"}{fmt(acct.balance)}
+                    </div>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{
+                        width: `${barPct}%`,
+                        background: isPositive
+                          ? `linear-gradient(90deg, ${color}, ${color}aa)`
+                          : `linear-gradient(90deg, var(--red), #dc2626)`,
+                        opacity: 0.7,
+                      }}
+                    />
                   </div>
                 </div>
               );
