@@ -195,10 +195,74 @@ const D=[
 ].map(r=>({code:r[0],name:r[1],total:r[2],held:r[3],p:r[4],a:r[5],pp:r[6],op:r[7],fac:r[8]}));
 const ORIG=JSON.parse(JSON.stringify(D));
 let BASE=ORIG.map(o=>({total:o.total,held:o.held,p:o.p,a:o.a})),LOG=[];
-try{const sv=JSON.parse(localStorage.getItem("att_v2")||"null");if(sv){if(Array.isArray(sv.base)&&sv.base.length===D.length)BASE=sv.base;if(Array.isArray(sv.log))LOG=sv.log}}catch(e){}
-function save(){try{localStorage.setItem("att_v2",JSON.stringify({base:BASE,log:LOG}))}catch(e){}}
+
+// --- Server sync layer (SQLite backend) ---
+let _syncing=false,_syncQueue=[];
+async function apiCall(method, url, body){
+  try{
+    const opts={method,headers:{'Content-Type':'application/json'}};
+    if(body)opts.body=JSON.stringify(body);
+    const r=await fetch(url,opts);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return await r.json();
+  }catch(e){console.warn('[attendance sync]',e);return null}
+}
+async function loadFromServer(){
+  const data=await apiCall('GET','/api/attendance');
+  if(data){
+    if(Array.isArray(data.base)&&data.base.length>0){
+      BASE=D.map((d,i)=>{
+        const b=data.base.find(x=>x.idx===i);
+        return b?{total:b.total,held:b.held,p:b.present,a:b.absent}:{total:d.total,held:d.held,p:d.p,a:d.a};
+      });
+    }
+    if(Array.isArray(data.log)){
+      LOG=data.log.map(l=>({d:l.date,i:l.i,s:l.s,w:l.w}));
+    }
+    // Cache locally as fallback
+    try{localStorage.setItem("att_v2",JSON.stringify({base:BASE,log:LOG}))}catch(e){}
+    return true;
+  }
+  // Fallback to localStorage if server unreachable
+  try{const sv=JSON.parse(localStorage.getItem("att_v2")||"null");if(sv){if(Array.isArray(sv.base)&&sv.base.length===D.length)BASE=sv.base;if(Array.isArray(sv.log))LOG=sv.log}}catch(e){}
+  return false;
+}
+function saveLocal(){try{localStorage.setItem("att_v2",JSON.stringify({base:BASE,log:LOG}))}catch(e){}}
+async function saveBaseToServer(){
+  saveLocal();
+  const base=BASE.map((b,i)=>({idx:i,total:b.total,held:b.held,present:b.p,absent:b.a}));
+  await apiCall('PUT','/api/attendance/base',{base});
+}
+async function saveLogEntry(date,i,s,w){
+  saveLocal();
+  if(s){
+    await apiCall('POST','/api/attendance/log',{date,i,s,w:w||1});
+  }else{
+    await apiCall('DELETE','/api/attendance/log',{date,i});
+  }
+}
+async function clearLogOnServer(){
+  saveLocal();
+  await apiCall('DELETE','/api/attendance/log/clear');
+}
+async function resetOnServer(){
+  saveLocal();
+  await apiCall('PUT','/api/attendance/reset');
+  // Also push original base data
+  const base=ORIG.map((o,i)=>({idx:i,total:o.total,held:o.held,present:o.p,absent:o.a}));
+  await apiCall('PUT','/api/attendance/base',{base});
+}
+async function restoreOnServer(baseData,logData){
+  saveLocal();
+  const base=baseData.map((b,i)=>({idx:b.idx??i,total:b.total,held:b.held,present:b.present??b.p,absent:b.absent??b.a}));
+  const log=logData.map(l=>({date:l.date??l.d,i:l.i??l.course_idx,s:l.s??l.status,w:l.w??l.weight??1}));
+  await apiCall('POST','/api/attendance/restore',{base,log});
+}
+
+function save(){saveLocal();} // kept for backward compat, server calls are explicit
 function recompute(){D.forEach((d,i)=>{const b=BASE[i];let p=b.p,a=b.a,h=b.held;LOG.forEach(l=>{if(l.i===i){const w=l.w||1;h+=w;l.s==="P"?p+=w:a+=w}});Object.assign(d,{total:b.total,p,a,held:h,pp:h?Math.round(p/h*100):0,op:b.total?Math.round(p/b.total*100):0})})}
 recompute();
+
 const $=id=>document.getElementById(id);
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let charts=[],sortKey="pp",sortDir=1;
@@ -295,12 +359,12 @@ function extra(){
 function editTbl(){
  $("edit").innerHTML="<tr><th>Course</th><th>Total planned</th><th>Held (faculty sessions)</th><th>Present</th><th>Absent</th></tr>"+
  D.map((d,i)=>`<tr><td>${d.name}</td>`+["total","held","p","a"].map(k=>`<td><input type="number" min="0" data-i="${i}" data-k="${k}" value="${BASE[i][k]}"></td>`).join("")+"</tr>").join("");
- document.querySelectorAll("#edit input").forEach(el=>el.onchange=()=>{BASE[el.dataset.i][el.dataset.k]=+el.value||0;save();recompute();all(true)});
+ document.querySelectorAll("#edit input").forEach(el=>el.onchange=()=>{BASE[el.dataset.i][el.dataset.k]=+el.value||0;saveBaseToServer();recompute();all(true)});
 }
-$("rst").onclick=()=>{BASE=ORIG.map(o=>({total:o.total,held:o.held,p:o.p,a:o.a}));LOG=[];save();recompute();all()};
-let clrArm=false;$("clr").onclick=()=>{if(!clrArm){clrArm=true;$("clr").textContent="Click again to confirm";setTimeout(()=>{clrArm=false;$("clr").textContent="Clear daily log"},4000);return}clrArm=false;$("clr").textContent="Clear daily log";LOG=[];save();recompute();all()};
+$("rst").onclick=()=>{BASE=ORIG.map(o=>({total:o.total,held:o.held,p:o.p,a:o.a}));LOG=[];resetOnServer();recompute();all()};
+let clrArm=false;$("clr").onclick=()=>{if(!clrArm){clrArm=true;$("clr").textContent="Click again to confirm";setTimeout(()=>{clrArm=false;$("clr").textContent="Clear daily log"},4000);return}clrArm=false;$("clr").textContent="Clear daily log";LOG=[];clearLogOnServer();recompute();all()};
 $("bk").onclick=()=>{const b=new Blob([JSON.stringify({base:BASE,log:LOG})],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="attendance-backup.json";a.click();URL.revokeObjectURL(u)};
-$("rs").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(Array.isArray(x.base)&&x.base.length===D.length){BASE=x.base;LOG=Array.isArray(x.log)?x.log:[];save();recompute();all()}}catch(er){}};r.readAsText(f)};
+$("rs").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(Array.isArray(x.base)&&x.base.length===D.length){BASE=x.base;LOG=Array.isArray(x.log)?x.log:[];restoreOnServer(BASE,LOG);recompute();all()}}catch(er){}};r.readAsText(f)};
 const ymd=t=>t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
 $("day").value=ymd(new Date());
 const SCHED=[{"code":"10212CS295","name":"Applied Programming Skills","dow":1,"s":"08:45","e":"09:35","frm":"2026-10-26","until":null,"n":1},{"code":"10216GE903","name":"Aptitude Skills - I","dow":3,"s":"08:45","e":"10:35","frm":"2026-09-23","until":1793145600000,"n":2},{"code":"10211CS208","name":"Software Engineering","dow":2,"s":"14:45","e":"15:35","frm":"2026-09-22","until":1793145600000,"n":1},{"code":"10210CH104","name":"Environmental Science and Sustainability","dow":5,"s":"15:45","e":"16:35","frm":"2026-09-18","until":1793145600000,"n":1},{"code":"10211CS227","name":"Problem Solving and Testing","dow":2,"s":"10:45","e":"12:35","frm":"2026-09-22","until":1793145600000,"n":2},{"code":"10212CS217","name":"Data Science","dow":5,"s":"08:45","e":"09:35","frm":"2026-09-18","until":1789756199000,"n":1},{"code":"10211CS227","name":"Problem Solving and Testing","dow":1,"s":"10:45","e":"12:35","frm":"2026-09-21","until":1793145600000,"n":2},{"code":"10213GE308","name":"Professional Communication for Engineers","dow":2,"s":"09:45","e":"10:35","frm":"2026-09-22","until":1793145600000,"n":1},{"code":"10213GE308","name":"Professional Communication for Engineers","dow":5,"s":"11:45","e":"12:35","frm":"2026-09-18","until":1793145600000,"n":1},{"code":"10211CS223","name":"Machine Learning Techniques","dow":5,"s":"09:45","e":"10:35","frm":"2026-09-18","until":1789756199000,"n":1},{"code":"10213GE308","name":"Professional Communication for Engineers","dow":3,"s":"14:45","e":"15:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10210CH104","name":"Environmental Science and Sustainability","dow":3,"s":"15:45","e":"16:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10212CS217","name":"Data Science","dow":1,"s":"13:45","e":"14:35","frm":"2026-09-21","until":1793145600000,"n":1},{"code":"10212CS217","name":"Data Science","dow":5,"s":"13:45","e":"15:35","frm":"2026-09-18","until":1793145600000,"n":2},{"code":"MINOR","name":"Minor Project - I","dow":6,"s":"12:45","e":"13:35","frm":"2026-09-19","until":1793145600000,"n":1},{"code":"10211CS129","name":"Modern Computer Architecture","dow":5,"s":"10:45","e":"11:35","frm":"2026-09-18","until":1793145600000,"n":1},{"code":"10212CS217","name":"Data Science","dow":3,"s":"10:45","e":"11:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10211CS129","name":"Modern Computer Architecture","dow":3,"s":"13:45","e":"14:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10211CS223","name":"Machine Learning Techniques","dow":3,"s":"11:45","e":"12:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10212CS295","name":"Applied Programming Skills","dow":2,"s":"13:45","e":"14:35","frm":"2026-09-22","until":1793145600000,"n":1},{"code":"10211CS129","name":"Modern Computer Architecture","dow":2,"s":"08:45","e":"09:35","frm":"2026-09-22","until":1793145600000,"n":1},{"code":"10212CS295","name":"Applied Programming Skills","dow":1,"s":"08:45","e":"09:35","frm":"2026-09-21","until":1792434599000,"n":1},{"code":"10211CS223","name":"Machine Learning Techniques","dow":1,"s":"14:45","e":"16:35","frm":"2026-09-21","until":1793145600000,"n":2},{"code":"10212CS295","name":"Applied Programming Skills","dow":4,"s":"08:45","e":"11:35","frm":"2026-09-17","until":1789669799000,"n":3},{"code":"10210CH104","name":"Environmental Science and Sustainability","dow":4,"s":"15:45","e":"16:35","frm":"2026-09-17","until":1789669799000,"n":1},{"code":"10211CS208","name":"Software Engineering","dow":4,"s":"11:45","e":"12:35","frm":"2026-09-17","until":1789669799000,"n":1},{"code":"10211CS208","name":"Software Engineering","dow":4,"s":"13:45","e":"15:35","frm":"2026-09-17","until":1789669799000,"n":2},{"code":"10212CS295","name":"Applied Programming Skills","dow":4,"s":"08:45","e":"11:35","frm":"2026-09-24","until":1793145600000,"n":3},{"code":"10211CS208","name":"Software Engineering","dow":4,"s":"11:45","e":"12:35","frm":"2026-09-24","until":1793145600000,"n":1},{"code":"10211CS208","name":"Software Engineering","dow":4,"s":"13:45","e":"15:35","frm":"2026-09-24","until":1793145600000,"n":2},{"code":"10210CH104","name":"Environmental Science and Sustainability","dow":4,"s":"15:45","e":"16:35","frm":"2026-09-24","until":1793145600000,"n":1},{"code":"10212CS217","name":"Data Science","dow":5,"s":"08:45","e":"09:35","frm":"2026-09-25","until":1793145600000,"n":1},{"code":"10211CS223","name":"Machine Learning Techniques","dow":5,"s":"09:45","e":"10:35","frm":"2026-09-25","until":1793145600000,"n":1}];
@@ -315,7 +379,7 @@ function dayRows(){const dt=$("day").value,by={};
  if($("showall").checked)D.forEach((d,i)=>{if(!rows.some(r=>r.i===i))rows.push({i,name:d.name,w:1,t:"not scheduled"})});
  return rows}
 function toast(m){const t=$("toast");t.textContent=m;t.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.opacity=0,1800)}
-function setMark(i,st,w){if(st)toast(st==="P"?"🎉 Present +"+(w||1)+" session(s)":"😬 Absent +"+(w||1)+" session(s)");const dt=$("day").value;LOG=LOG.filter(l=>!(l.d===dt&&l.i===i));if(st)LOG.push({d:dt,i,s:st,w:w||1});save();recompute();all(true)}
+function setMark(i,st,w){if(st)toast(st==="P"?"🎉 Present +"+(w||1)+" session(s)":"😬 Absent +"+(w||1)+" session(s)");const dt=$("day").value;LOG=LOG.filter(l=>!(l.d===dt&&l.i===i));if(st)LOG.push({d:dt,i,s:st,w:w||1});saveLogEntry(dt,i,st,w||1);recompute();all(true)}
 function daily(){
  const dt=$("day").value,rows=dayRows();
  $("mark").innerHTML=rows.length?rows.map(r=>{
@@ -347,7 +411,7 @@ function leave(){
 ["lf","lt"].forEach(i=>$(i).oninput=leave);
 $("showall").onchange=()=>daily();
 $("day").oninput=()=>{daily();ttRender()};
-const bulkDay=st=>{const dt=$("day").value,rows=dayRows().filter(r=>r.i!=null);LOG=LOG.filter(l=>!(l.d===dt&&rows.some(r=>r.i===l.i)));if(st)rows.forEach(r=>LOG.push({d:dt,i:r.i,s:st,w:r.w}));save();recompute();all(true)};
+const bulkDay=st=>{const dt=$("day").value,rows=dayRows().filter(r=>r.i!=null);LOG=LOG.filter(l=>!(l.d===dt&&rows.some(r=>r.i===l.i)));if(st)rows.forEach(r=>LOG.push({d:dt,i:r.i,s:st,w:r.w}));saveLocal();const marks=rows.map(r=>({i:r.i,s:st,w:r.w}));apiCall('POST','/api/attendance/log/bulk',{date:dt,marks});recompute();all(true)};
 $("allp").onclick=()=>bulkDay("P");$("alla").onclick=()=>bulkDay("A");$("allc").onclick=()=>bulkDay("");
 let lc=[];
 function logAnalysis(){
@@ -377,7 +441,7 @@ function logAnalysis(){
  // table
  const rec=[...LOG].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,25);
  $("logt").innerHTML="<tr><th>Date</th><th>Course</th><th>Status</th><th></th></tr>"+(rec.length?rec.map(l=>`<tr><td>${l.d}</td><td>${short(D[l.i])}</td><td><span class="pill" style="background:${l.s==="P"?css("--ok"):css("--bad")}">${l.s==="P"?"Present":"Absent"}${(l.w||1)>1?" ×"+l.w:""}</span></td><td><button class="b" data-d="${l.d}" data-i="${l.i}">Delete</button></td></tr>`).join(""):"<tr><td colspan=4>Nothing yet</td></tr>");
- document.querySelectorAll("#logt .b").forEach(b=>b.onclick=()=>{LOG=LOG.filter(l=>!(l.d===b.dataset.d&&l.i==+b.dataset.i));save();recompute();all(true)});
+ document.querySelectorAll("#logt .b").forEach(b=>b.onclick=()=>{const dd=b.dataset.d,ii=+b.dataset.i;LOG=LOG.filter(l=>!(l.d===dd&&l.i===ii));saveLogEntry(dd,ii,'',1);recompute();all(true)});
  // weekly insight
  const now=new Date(),mon=new Date(now);mon.setDate(now.getDate()-((now.getDay()+6)%7));const ms=ymd(mon);
  const wk=LOG.filter(l=>l.d>=ms),wP=wk.filter(l=>l.s==="P").reduce((a,l)=>a+W(l),0),wT=wk.reduce((a,l)=>a+W(l),0);
@@ -400,5 +464,6 @@ function all(keepEdit){hero();kpis();table();draw();planner();extra();logAnalysi
 $("simc").innerHTML=D.map((d,i)=>`<option value="${i}">${d.code} – ${short(d)}</option>`).join("");
 ["req","metric","tgt","remsrc"].forEach(i=>$(i).oninput=all);$("go").onclick=sim;
 matchMedia("(prefers-color-scheme:dark)").onchange=all;
-all();
+// Boot: load from server first, then render
+(async()=>{await loadFromServer();recompute();all()})();
 </script></body></html>

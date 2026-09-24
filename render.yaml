@@ -21,3 +21,7 @@ services:
         sync: false
       - key: HABIT_META_DB_ID
         sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false

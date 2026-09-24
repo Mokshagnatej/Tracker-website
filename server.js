@@ -31,6 +31,16 @@ app.all('/api/habits/:id', (req, res) => {
 app.all('/api/metadata', (req, res) => require('./api/metadata.js')(req, res));
 app.all('/api/mood', (req, res) => require('./api/mood.js')(req, res));
 
+// Attendance API (SQLite-backed)
+app.get('/api/attendance', (req, res) => require('./api/attendance.js')(req, res));
+app.put('/api/attendance/base', (req, res) => require('./api/attendance.js')(req, res));
+app.post('/api/attendance/log/bulk', (req, res) => require('./api/attendance.js')(req, res));
+app.post('/api/attendance/log', (req, res) => require('./api/attendance.js')(req, res));
+app.delete('/api/attendance/log/clear', (req, res) => require('./api/attendance.js')(req, res));
+app.delete('/api/attendance/log', (req, res) => require('./api/attendance.js')(req, res));
+app.put('/api/attendance/reset', (req, res) => require('./api/attendance.js')(req, res));
+app.post('/api/attendance/restore', (req, res) => require('./api/attendance.js')(req, res));
+
 // Serve static frontend
 app.use(express.static(path.join(__dirname, 'dist')));
 
