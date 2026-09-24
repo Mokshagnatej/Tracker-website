@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Attendance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f0fb;--bg2:#eef2ff;--card:#fff;--text:#1c1b2e;--muted:#6f6b8a;--line:#e7e3f7;--ok:#16a34a;--warn:#f59e0b;--bad:#dc2626;--acc:#6d5bff;--acc2:#ff5fa2;--acc3:#00c2b8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0b1a;--bg2:#120f24;--card:#1a1730;--text:#f1eeff;--muted:#a49dc9;--line:#2d2850;--acc:#9b8bff;--acc2:#ff7fb6;--acc3:#2be0d2}}
+:root[data-theme="dark"]{--bg:#0d0b1a;--bg2:#120f24;--card:#1a1730;--text:#f1eeff;--muted:#a49dc9;--line:#2d2850;--acc:#9b8bff;--acc2:#ff7fb6;--acc3:#2be0d2}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;background:radial-gradient(1100px 700px at 8% -10%,color-mix(in srgb,var(--acc) 16%,transparent),transparent),radial-gradient(900px 600px at 110% 0%,color-mix(in srgb,var(--acc2) 14%,transparent),transparent),var(--bg);color:var(--text);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1150px;margin:0 auto;padding:20px 16px 48px}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.brand .em{font-size:30px;filter:drop-shadow(0 4px 10px rgba(109,91,255,.35))}
+.brand h1{margin:0;font-family:"Space Grotesk",sans-serif;font-size:27px;font-weight:700;background:linear-gradient(90deg,var(--acc),var(--acc2) 60%,var(--acc3));-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.01em}
+.brand .sub{color:var(--muted);font-size:13px;margin-top:1px}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(20,10,60,.04),0 10px 24px -18px rgba(20,10,60,.25);transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 2px 4px rgba(20,10,60,.05),0 16px 32px -16px rgba(109,91,255,.28)}
+.kpi{position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--acc),var(--acc2))}
+.kpi .l{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.kpi .v{font-family:"Space Grotesk",sans-serif;font-size:30px;font-weight:700;margin-top:4px}
+.two{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-bottom:14px}
+h2{font-family:"Space Grotesk",sans-serif;font-size:16px;margin:0 0 12px;font-weight:700}
+.ch{position:relative;height:290px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.tools label{font-size:13px;color:var(--muted)}
+input[type=number],select{background:var(--bg2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:7px 9px;font-size:14px;font-family:inherit}
+input[type=number]{width:70px}
+input[type=number]:focus,select:focus,input[type=date]:focus{outline:2px solid color-mix(in srgb,var(--acc) 45%,transparent);outline-offset:1px}
+input[type=date]{background:var(--bg2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-family:inherit}
+.tblw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:760px}
+th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;white-space:nowrap}
+tbody tr:hover td{background:color-mix(in srgb,var(--acc) 6%,transparent)}
+.bar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;transition:width .4s ease}
+.pill{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;box-shadow:0 2px 6px -2px rgba(0,0,0,.35)}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+.sim{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:14px}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 4px;border-bottom:1px solid var(--line);font-size:14px;border-radius:8px}
+.mrow:hover{background:color-mix(in srgb,var(--acc) 5%,transparent)}
+.mb{display:flex;gap:6px}
+button.b{background:var(--bg2);color:var(--text);border:1px solid var(--line);padding:6px 11px;font-size:13px;border-radius:9px;font-weight:600;transition:transform .15s}
+button.b:hover{transform:translateY(-1px)}
+button.b.on.p{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:transparent}button.b.on.a{background:linear-gradient(135deg,#f87171,#dc2626);color:#fff;border-color:transparent}
+button.sec{background:var(--bg2);color:var(--text);border:1px solid var(--line)}
+.tt{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.tt .dh{font-weight:700;font-size:13px;margin-bottom:6px}.tt .today{color:var(--acc)}
+.blk{border-left:4px solid var(--acc);background:var(--bg2);border-radius:9px;padding:6px 8px;margin-bottom:6px;font-size:12px}
+.blk b{display:block;font-size:12.5px}.blk span{color:var(--muted)}
+.hero{position:relative;overflow:hidden;display:flex;gap:20px;align-items:center;flex-wrap:wrap;padding:26px;border-radius:22px;color:#fff;background:linear-gradient(135deg,var(--acc),#a166ff 45%,var(--acc2) 85%);margin-bottom:14px;box-shadow:0 20px 45px -20px rgba(109,91,255,.55)}
+.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(240px 240px at 88% -20%,rgba(255,255,255,.35),transparent 60%),radial-gradient(200px 200px at 100% 120%,rgba(255,255,255,.2),transparent 60%);pointer-events:none}
+.hero>div{position:relative}
+.ht{font-family:"Space Grotesk",sans-serif;font-size:23px;font-weight:700}.hs{opacity:.94;font-size:14px;margin-top:4px}
+.cg{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.cc{display:flex;gap:12px;align-items:center;transition:transform .2s,box-shadow .2s}.cc:hover{transform:translateY(-5px) rotate(-.6deg)}
+.bd{display:flex;gap:10px;flex-wrap:wrap}.bdg{padding:8px 12px;border-radius:99px;background:var(--bg2);border:1px solid var(--line);font-size:13px;opacity:.4;filter:grayscale(1);transition:transform .15s}
+.bdg.on{opacity:1;filter:none;background:linear-gradient(90deg,#fde68a,#fca5a5);color:#3b2a00;font-weight:700;box-shadow:0 4px 12px -4px rgba(252,165,165,.7)}
+.bdg.on:hover{transform:scale(1.05)}.bdg span{margin-right:6px}
+.rv{animation:g 1.1s ease-out}@keyframes g{from{stroke-dashoffset:var(--C)}}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:linear-gradient(135deg,#1f1b3a,#3a2f66);color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
+.heat{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;max-width:420px}
+.heat div{aspect-ratio:1;border-radius:7px;background:var(--bg2);font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:transform .15s}
+.heat div:hover{transform:scale(1.15)}
+button{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:0;border-radius:9px;padding:8px 13px;cursor:pointer;font-weight:600;font-family:inherit;transition:transform .15s,box-shadow .15s}
+button:hover{transform:translateY(-1px);box-shadow:0 8px 18px -8px color-mix(in srgb,var(--acc) 70%,transparent)}
+::-webkit-scrollbar{height:9px;width:9px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+</style></head><body><div class="wrap">
+<div class="brand"><span class="em">🎓</span><div><h1>Attendance HQ</h1><div class="sub">Your live semester tracker — marks, trends &amp; what-ifs, all in one place</div></div></div>
+<div id="hero" class="hero"></div>
+<div id="cards" class="grid cg" style="margin-bottom:14px"></div>
+<div class="card" id="badges" style="margin-bottom:14px"></div>
+<div id="toast"></div>
+
+<div class="card tools">
+<label>Required attendance % <input id="req" type="number" value="75" min="1" max="100"></label>
+<label>Chart metric
+<select id="metric"><option value="pp">My present % (in held classes)</option><option value="op">Overall % (of total planned)</option></select></label>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+<h2>📅 Daily update – mark today's attendance</h2>
+<div class="tools"><label>Date <input type="date" id="day"></label>
+<label><input type="checkbox" id="showall"> Show all courses</label><button class="sec" id="allp">All present</button><button class="sec" id="alla">All absent</button><button class="sec" id="allc">Clear day</button></div>
+<div id="mark"></div>
+<div class="note">Classes are filled in from your timetable for the selected date. Tap Present or Absent, and a 3-period class counts as 3 sessions. Changing a mark replaces the old one, and every chart below updates instantly.</div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+<h2>🗓️ Weekly timetable <span style="font-weight:400;color:var(--muted);font-size:12px">(week of the selected date)</span></h2>
+<div class="tt" id="tt"></div>
+<div class="ch" style="height:200px;margin-top:14px"><canvas id="c11"></canvas></div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+<h2>🏖️ Leave / bunk planner</h2>
+<div class="tools"><label>From <input type="date" id="lf"></label><label>To <input type="date" id="lt"></label></div>
+<div id="lsum" style="font-size:14px;margin-bottom:8px"></div>
+<div class="tblw"><table id="lv" style="min-width:560px"></table></div>
+<div class="note">Uses your timetable to count the classes you would miss in that date range and shows what your attendance would drop to.</div>
+</div>
+
+<div class="grid kpis" id="kpis"></div>
+
+<div class="card" style="margin-bottom:14px"><h2>💡 Auto insights</h2><ul id="ins" style="margin:0;padding-left:20px;line-height:1.7;font-size:14px"></ul>
+<h2 style="margin-top:16px">🔥 Focus priority (attend these first)</h2><div class="tblw"><table id="prio" style="min-width:560px"></table></div></div>
+
+<div class="grid two">
+<div class="card"><h2>Present % by course</h2><div class="ch"><canvas id="c1"></canvas></div></div>
+<div class="card"><h2>Present vs absent classes</h2><div class="ch"><canvas id="c2"></canvas></div></div>
+<div class="card"><h2>Course health radar</h2><div class="ch"><canvas id="c3"></canvas></div></div>
+<div class="card"><h2>Semester progress (held vs remaining)</h2><div class="ch"><canvas id="c4"></canvas></div></div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+<h2>Course details <span style="font-weight:400;color:var(--muted);font-size:12px">(click a header to sort)</span></h2>
+<div class="tblw"><table id="tbl"></table></div>
+<div class="note">"Can skip" = classes you can still miss while staying at the required % of held classes. "Need" = consecutive classes you must attend to recover.</div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+<h2>📈 Daily log analysis</h2>
+<div class="grid kpis" id="lk" style="margin-bottom:10px"></div>
+<div id="logempty" class="note" style="display:none">No daily marks yet. Use the Daily update card above and these charts will fill in.</div>
+<div class="grid two">
+<div><h2 style="font-size:14px">Combined attendance % over time</h2><div class="ch" style="height:240px"><canvas id="c9"></canvas></div></div>
+<div><h2 style="font-size:14px">Present / absent by weekday</h2><div class="ch" style="height:240px"><canvas id="c10"></canvas></div></div>
+</div>
+<h2 style="font-size:14px;margin-top:14px">Last 5 weeks calendar <span style="font-weight:400;color:var(--muted)">(green all present · red all absent · amber mixed)</span></h2>
+<div class="heat" id="heat"></div>
+<h2 style="font-size:14px;margin-top:14px">Recent entries</h2>
+<div class="tblw"><table id="logt" style="min-width:420px"></table></div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+<h2>🔮 Bulk scenario – every course at once</h2>
+<div class="tools"><label>If I</label><select id="bm"><option value="attend">attend</option><option value="miss">miss</option></select>
+<label>the next <input id="bn" type="number" value="5" min="0" max="60"> classes in every course</label></div>
+<div class="tblw"><table id="bulk" style="min-width:560px"></table></div>
+<div class="ch" style="height:260px;margin-top:14px"><canvas id="c6"></canvas></div>
+</div>
+
+<div class="grid two">
+<div class="card"><h2>Where your absences come from</h2><div class="ch"><canvas id="c7"></canvas></div></div>
+<div class="card"><h2>Course progress vs attendance</h2><div class="ch"><canvas id="c8"></canvas></div><div class="note">Each dot is a course: x = % of planned classes counted so far, y = present %.</div></div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+<h2>✏️ Edit data &amp; export</h2>
+<div class="note" style="margin:0 0 10px">Baseline numbers from your college portal. Your daily marks are added on top. When you refresh from the portal, update these and press "Clear daily log".</div>
+<div class="tblw"><table id="edit" style="min-width:560px"></table></div>
+<div class="sim" style="margin-top:12px"><button id="rst">Reset to original</button><button id="clr" class="sec">Clear daily log</button><button id="csv">Download CSV</button><button id="bk" class="sec">Backup (JSON)</button><label class="sec" style="cursor:pointer;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:14px">Restore backup<input id="rs" type="file" accept=".json" style="display:none"></label></div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+<h2>🚀 Classes needed to reach target</h2>
+<div class="tools"><label>Target attendance % <input id="tgt" type="number" value="75" min="1" max="99"></label><label>Classes left from <select id="remsrc"><option value="portal">Portal totals</option><option value="tt">Timetable (to 28 Oct)</option></select></label>
+<span class="note" style="margin:0">Shows how many classes in a row you must attend (with no more absences) to reach the target.</span></div>
+<div class="tblw"><table id="plan"></table></div>
+<div class="ch" style="height:260px;margin-top:14px"><canvas id="c5"></canvas></div>
+</div>
+
+<div class="card">
+<h2>🎯 What-if simulator</h2>
+<div class="sim">
+<select id="simc"></select>
+<label>I attend <input id="att" type="number" value="5" min="0"></label> next class(es),
+<label>and miss <input id="mis" type="number" value="0" min="0"></label>
+<button id="go">Calculate</button>
+</div>
+<div id="simout" class="note" style="font-size:15px;color:var(--text)"></div>
+</div>
+</div>
+<script>
+// Data from screenshot. total=TOTALSESSIONS, held=FACULTYSESSIONS, p=PRESENT, a=ABSENT, pp=PRESENTPERCENTAGE, op=OVERALLPERCENTAGE
+const D=[
+["10210CH104","Environmental Science & Sustainability",45,28,19,3,68,42,"Dr. Kanniraj A"],
+["10211CS129","Modern Computer Architecture",45,30,24,6,80,53,"Dr. Barkathulla A. A"],
+["10211CS208","Software Engineering",60,38,28,10,74,47,"Dr. Amu. D"],
+["10211CS223","Machine Learning Techniques",60,40,31,8,78,52,"Dr. Godlin Jasil. S.P"],
+["10211CS227","Problem Solving and Testing",75,53,42,10,79,56,"Dr. Sathyamoorthy. K"],
+["10212CS217","Data Science",60,47,41,4,87,68,"Dr. Angeline Lydia"],
+["10212CS295","Applied Coding Skills",75,47,36,10,77,48,"Dr. Kaviarasan. S"],
+["10212CS461","Design & Impl. of Human-Computer Interfaces",12,1,1,0,100,8,"Gopi. S"],
+["10213GE308","Professional Communication for Engineers",45,29,18,4,62,40,"Dr. Umanesan. R"],
+["10216GE903","Aptitude Skills - I",30,19,15,4,79,50,"Dinesh Kumar. R"]
+].map(r=>({code:r[0],name:r[1],total:r[2],held:r[3],p:r[4],a:r[5],pp:r[6],op:r[7],fac:r[8]}));
+const ORIG=JSON.parse(JSON.stringify(D));
+let BASE=ORIG.map(o=>({total:o.total,held:o.held,p:o.p,a:o.a})),LOG=[];
+try{const sv=JSON.parse(localStorage.getItem("att_v2")||"null");if(sv){if(Array.isArray(sv.base)&&sv.base.length===D.length)BASE=sv.base;if(Array.isArray(sv.log))LOG=sv.log}}catch(e){}
+function save(){try{localStorage.setItem("att_v2",JSON.stringify({base:BASE,log:LOG}))}catch(e){}}
+function recompute(){D.forEach((d,i)=>{const b=BASE[i];let p=b.p,a=b.a,h=b.held;LOG.forEach(l=>{if(l.i===i){const w=l.w||1;h+=w;l.s==="P"?p+=w:a+=w}});Object.assign(d,{total:b.total,p,a,held:h,pp:h?Math.round(p/h*100):0,op:b.total?Math.round(p/b.total*100):0})})}
+recompute();
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let charts=[],sortKey="pp",sortDir=1;
+const req=()=>+$("req").value||75;
+const col=v=>v>=req()?css("--ok"):v>=req()-10?css("--warn"):css("--bad");
+const short=d=>d.name.length>22?d.name.slice(0,21)+"…":d.name;
+// classes can skip / need (based on present% of held classes)
+function calc(d){const R=req()/100,c=d.p,t=d.held; // portal formula: present / held sessions
+ const pct=t?c/t*100:0;
+ let skip=Math.floor(c/R-t), need=0;
+ if(skip<0){skip=0;need=Math.ceil((R*t-c)/(1-R));}
+ return{pct,skip,need,t};}
+function kpis(){
+ const tp=D.reduce((s,d)=>s+d.p,0),ta=D.reduce((s,d)=>s+d.a,0);
+ const avg=D.reduce((s,d)=>s+d.pp,0)/D.length;
+ const safe=D.filter(d=>d.pp>=req()).length;
+ const low=[...D].sort((a,b)=>a.pp-b.pp)[0], best=[...D].sort((a,b)=>b.pp-a.pp).filter(d=>d.held>5)[0];
+ const items=[["Average present %",avg.toFixed(1)+"%",col(avg)],["Classes attended",tp,""],["Classes missed",ta,""],
+ ["Courses above "+req()+"%",safe+" / "+D.length,safe==D.length?css("--ok"):css("--warn")],
+ ["Lowest course",low.pp+"%",css("--bad"),low.name.slice(0,22)],["Best (5+ classes)",best.pp+"%",css("--ok"),best.name.slice(0,22)]];
+ $("kpis").innerHTML=items.map(i=>`<div class="card kpi"><div class="l">${i[0]}</div><div class="v" style="color:${i[2]||"inherit"}">${i[1]}</div>${i[3]?`<div class="note" style="margin:2px 0 0">${i[3]}</div>`:""}</div>`).join("");
+}
+function table(){
+ const rows=D.map(d=>({...d,...calc(d)})).sort((a,b)=>(typeof a[sortKey]=="string"?a[sortKey].localeCompare(b[sortKey]):a[sortKey]-b[sortKey])*sortDir);
+ const H=[["code","Code"],["name","Course"],["held","Held"],["p","Present"],["a","Absent"],["pp","Present %"],["op","Overall %"],["skip","Can skip"],["need","Need"]];
+ $("tbl").innerHTML="<tr>"+H.map(h=>`<th data-k="${h[0]}">${h[1]}</th>`).join("")+"<th>Status</th></tr>"+
+ rows.map(r=>{const c=col(r.pp),ok=r.pp>=req();
+ return `<tr><td>${r.code}</td><td>${r.name}<div class="note" style="margin:0">${r.fac}</div></td><td>${r.held}/${r.total}</td><td>${r.p}</td><td>${r.a}</td>
+ <td><div class="bar"><i style="width:${r.pp}%;background:${c}"></i></div>${r.pp}%</td><td>${r.op}%</td>
+ <td>${ok?r.skip:"–"}</td><td>${ok?"–":r.need}</td>
+ <td><span class="pill" style="background:${c}">${ok?"Safe":r.pp>=req()-10?"Watch":"Low"}</span></td></tr>`}).join("");
+ document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortDir=sortKey==k?-sortDir:1;sortKey=k;table()});
+}
+function draw(){
+ charts.forEach(c=>c.destroy());charts=[];
+ const m=$("metric").value,tx=css("--muted"),ln=css("--line");
+ Chart.defaults.color=tx;
+ const labels=D.map(short),vals=D.map(d=>d[m]),r=req();
+ const scales={x:{grid:{color:ln},ticks:{maxRotation:60,minRotation:40}},y:{grid:{color:ln},beginAtZero:true,max:100}};
+ const line={id:"req",afterDraw(ch){const y=ch.scales.y.getPixelForValue(r),{left,right}=ch.chartArea,x=ch.ctx;x.save();x.strokeStyle=css("--bad");x.setLineDash([6,4]);x.beginPath();x.moveTo(left,y);x.lineTo(right,y);x.stroke();x.restore();}};
+ charts.push(new Chart($("c1"),{type:"bar",data:{labels,datasets:[{data:vals,backgroundColor:vals.map(col),borderRadius:6}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales},plugins:[line]}));
+ charts.push(new Chart($("c2"),{type:"bar",data:{labels,datasets:[{label:"Present",data:D.map(d=>d.p),backgroundColor:css("--ok"),borderRadius:4},{label:"Absent",data:D.map(d=>d.a),backgroundColor:css("--bad"),borderRadius:4}]},options:{maintainAspectRatio:false,scales:{x:{stacked:true,grid:{color:ln},ticks:{maxRotation:60,minRotation:40}},y:{stacked:true,grid:{color:ln}}}}}));
+ charts.push(new Chart($("c3"),{type:"radar",data:{labels:D.map(d=>d.code.slice(-5)),datasets:[{label:"Present %",data:D.map(d=>d.pp),borderColor:css("--acc"),backgroundColor:"rgba(79,124,255,.25)"},{label:"Required",data:D.map(()=>r),borderColor:css("--bad"),borderDash:[5,4],pointRadius:0,fill:false}]},options:{maintainAspectRatio:false,scales:{r:{min:0,max:100,grid:{color:ln},angleLines:{color:ln},ticks:{backdropColor:"transparent"}}}}}));
+ charts.push(new Chart($("c4"),{type:"bar",data:{labels,datasets:[{label:"Attended",data:D.map(d=>d.p),backgroundColor:css("--ok")},{label:"Missed",data:D.map(d=>d.a),backgroundColor:css("--bad")},{label:"Other (OD/leave)",data:D.map(d=>Math.max(d.held-d.p-d.a,0)),backgroundColor:css("--warn")},{label:"Remaining",data:D.map(d=>Math.max(d.total-d.held,0)),backgroundColor:ln}]},options:{indexAxis:"y",maintainAspectRatio:false,scales:{x:{stacked:true,grid:{color:ln}},y:{stacked:true,grid:{display:false}}}}}));
+}
+function sim(){
+ const d=D[$("simc").value],a=+$("att").value||0,ms=+$("mis").value||0;
+ const p=d.p+a,t=d.held+a+ms,pct=t?p/t*100:0;
+ $("simout").innerHTML=`<b>${d.name}</b>: ${d.pp}% → <b style="color:${col(pct)}">${pct.toFixed(1)}%</b> (${p}/${t}) — ${pct>=req()?"✅ above":"⚠️ below"} ${req()}%.`;
+}
+let pc;
+function planner(){
+ const R=(+$("tgt").value||75)/100,RS=$("remsrc").value,SR=schedRemain();
+ const rows=D.map((d,ix)=>{const t=d.held,pct=t?d.p/t*100:0,hasS=SCHED.some(x=>x.code===d.code),rem=(RS==="tt"&&hasS)?SR[ix]:Math.max(d.total-t,0),miss=Math.floor(d.p+rem-R*(t+rem));
+  const need=pct/100>=R?0:Math.ceil((R*t-d.p)/(1-R));
+  const fin=(d.p+rem)/(t+rem)*100;
+  return{...d,pct,rem,need,fin,miss,ok:need<=rem,sr:hasS?SR[ix]:null};});
+ $("plan").innerHTML="<tr><th>Course</th><th>Now</th><th>Present/Held</th><th>Need to attend</th><th>Classes left</th><th>Timetable left</th><th>Max possible %</th><th>Can still miss (of left)</th><th>Result</th></tr>"+
+ rows.map(r=>`<tr><td>${r.name}</td><td>${r.pct.toFixed(1)}%</td><td>${r.p}/${r.held}</td>
+ <td><b>${r.need===0?"✅ Already there":r.need}</b></td><td>${r.rem}</td><td>${r.sr==null?"–":r.sr}</td><td>${r.fin.toFixed(1)}%</td><td>${r.miss>=0?r.miss:"Not possible"}</td>
+ <td><span class="pill" style="background:${r.need===0?css("--ok"):r.ok?css("--warn"):css("--bad")}">${r.need===0?"Safe":r.ok?"Recoverable":"Not enough classes left"}</span></td></tr>`).join("");
+ if(pc)pc.destroy();
+ pc=new Chart($("c5"),{type:"bar",data:{labels:rows.map(short),datasets:[{label:"Classes to attend",data:rows.map(r=>r.need),backgroundColor:rows.map(r=>r.need===0?css("--ok"):r.ok?css("--warn"):css("--bad")),borderRadius:6},{label:"Classes left",data:rows.map(r=>r.rem),backgroundColor:css("--line"),borderRadius:6}]},options:{maintainAspectRatio:false,scales:{x:{grid:{color:css("--line")},ticks:{maxRotation:60,minRotation:40}},y:{grid:{color:css("--line")},beginAtZero:true}}}});
+}
+let xc=[];
+function extra(){
+ const R=req(),ln=css("--line"),cur=D.map(d=>d.held?d.p/d.held*100:0);
+ // insights
+ const tp=D.reduce((a,d)=>a+d.p,0),tt=D.reduce((a,d)=>a+d.held,0),comb=tt?tp/tt*100:0;
+ const low=D.filter((d,i)=>cur[i]<R),safe=D.filter((d,i)=>cur[i]>=R);
+ const skips=safe.reduce((a,d)=>a+calc(d).skip,0);
+ const worst=D.reduce((m,d)=>d.a>m.a?d:m,D[0]);
+ const L=[`Combined attendance across all courses: <b>${comb.toFixed(1)}%</b> (${tp}/${tt} classes).`,
+ low.length?`<b>${low.length}</b> course(s) below ${R}%: ${low.map(d=>d.name).join(", ")}.`:`All courses are above ${R}% 🎉`,
+ `You can still skip about <b>${skips}</b> classes in total across safe courses without dropping below ${R}%.`,
+ `Most absences: <b>${worst.name}</b> (${worst.a} missed).`];
+ $("ins").innerHTML=L.map(x=>"<li>"+x+"</li>").join("");
+ // priority
+ const pr=D.map((d,i)=>({...d,pct:cur[i],need:calc(d).need,gap:R-cur[i]})).sort((a,b)=>b.gap-a.gap);
+ $("prio").innerHTML="<tr><th>#</th><th>Course</th><th>Present %</th><th>Gap to "+R+"%</th><th>Need to attend</th></tr>"+
+ pr.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.pct.toFixed(1)}%</td><td style="color:${r.gap>0?css("--bad"):css("--ok")}">${r.gap>0?"-"+r.gap.toFixed(1)+"%":"+"+(-r.gap).toFixed(1)+"%"}</td><td>${r.gap>0?r.need:"–"}</td></tr>`).join("");
+ // bulk
+ const n=+$("bn").value||0,att=$("bm").value==="attend";
+ const proj=D.map(d=>{const t=d.held;return att?(d.p+n)/(t+n)*100:d.p/(t+n)*100});
+ $("bulk").innerHTML="<tr><th>Course</th><th>Now</th><th>After</th><th>Change</th><th>Status</th></tr>"+
+ D.map((d,i)=>{const df=proj[i]-cur[i];return `<tr><td>${d.name}</td><td>${cur[i].toFixed(1)}%</td><td><b>${proj[i].toFixed(1)}%</b></td><td style="color:${df>=0?css("--ok"):css("--bad")}">${df>=0?"+":""}${df.toFixed(1)}%</td><td><span class="pill" style="background:${col(proj[i])}">${proj[i]>=R?"Safe":"Below "+R+"%"}</span></td></tr>`}).join("");
+ xc.forEach(c=>c.destroy());xc=[];
+ const sc={x:{grid:{color:ln},ticks:{maxRotation:60,minRotation:40}},y:{grid:{color:ln},beginAtZero:true,max:100}};
+ xc.push(new Chart($("c6"),{type:"bar",data:{labels:D.map(short),datasets:[{label:"Now",data:cur,backgroundColor:css("--acc"),borderRadius:4},{label:"After",data:proj,backgroundColor:proj.map(col),borderRadius:4}]},options:{maintainAspectRatio:false,scales:sc}}));
+ const pal=["#4f7cff","#16a34a","#f59e0b","#dc2626","#8b5cf6","#06b6d4","#ec4899","#84cc16","#f97316","#64748b"];
+ xc.push(new Chart($("c7"),{type:"doughnut",data:{labels:D.map(short),datasets:[{data:D.map(d=>d.a),backgroundColor:pal,borderColor:css("--card")}]},options:{maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{boxWidth:10,font:{size:11}}}}}}));
+ xc.push(new Chart($("c8"),{type:"scatter",data:{datasets:[{data:D.map((d,i)=>({x:+(d.held/d.total*100).toFixed(1),y:+cur[i].toFixed(1),n:short(d)})),backgroundColor:D.map((d,i)=>col(cur[i])),pointRadius:8}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.n+": "+c.raw.y+"% (progress "+c.raw.x+"%)"}}},scales:{x:{title:{display:true,text:"Semester progress %"},grid:{color:ln},min:0},y:{title:{display:true,text:"Present %"},grid:{color:ln},min:0,max:100}}}}));
+}
+function editTbl(){
+ $("edit").innerHTML="<tr><th>Course</th><th>Total planned</th><th>Held (faculty sessions)</th><th>Present</th><th>Absent</th></tr>"+
+ D.map((d,i)=>`<tr><td>${d.name}</td>`+["total","held","p","a"].map(k=>`<td><input type="number" min="0" data-i="${i}" data-k="${k}" value="${BASE[i][k]}"></td>`).join("")+"</tr>").join("");
+ document.querySelectorAll("#edit input").forEach(el=>el.onchange=()=>{BASE[el.dataset.i][el.dataset.k]=+el.value||0;save();recompute();all(true)});
+}
+$("rst").onclick=()=>{BASE=ORIG.map(o=>({total:o.total,held:o.held,p:o.p,a:o.a}));LOG=[];save();recompute();all()};
+let clrArm=false;$("clr").onclick=()=>{if(!clrArm){clrArm=true;$("clr").textContent="Click again to confirm";setTimeout(()=>{clrArm=false;$("clr").textContent="Clear daily log"},4000);return}clrArm=false;$("clr").textContent="Clear daily log";LOG=[];save();recompute();all()};
+$("bk").onclick=()=>{const b=new Blob([JSON.stringify({base:BASE,log:LOG})],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="attendance-backup.json";a.click();URL.revokeObjectURL(u)};
+$("rs").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(Array.isArray(x.base)&&x.base.length===D.length){BASE=x.base;LOG=Array.isArray(x.log)?x.log:[];save();recompute();all()}}catch(er){}};r.readAsText(f)};
+const ymd=t=>t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+$("day").value=ymd(new Date());
+const SCHED=[{"code":"10212CS295","name":"Applied Programming Skills","dow":1,"s":"08:45","e":"09:35","frm":"2026-10-26","until":null,"n":1},{"code":"10216GE903","name":"Aptitude Skills - I","dow":3,"s":"08:45","e":"10:35","frm":"2026-09-23","until":1793145600000,"n":2},{"code":"10211CS208","name":"Software Engineering","dow":2,"s":"14:45","e":"15:35","frm":"2026-09-22","until":1793145600000,"n":1},{"code":"10210CH104","name":"Environmental Science and Sustainability","dow":5,"s":"15:45","e":"16:35","frm":"2026-09-18","until":1793145600000,"n":1},{"code":"10211CS227","name":"Problem Solving and Testing","dow":2,"s":"10:45","e":"12:35","frm":"2026-09-22","until":1793145600000,"n":2},{"code":"10212CS217","name":"Data Science","dow":5,"s":"08:45","e":"09:35","frm":"2026-09-18","until":1789756199000,"n":1},{"code":"10211CS227","name":"Problem Solving and Testing","dow":1,"s":"10:45","e":"12:35","frm":"2026-09-21","until":1793145600000,"n":2},{"code":"10213GE308","name":"Professional Communication for Engineers","dow":2,"s":"09:45","e":"10:35","frm":"2026-09-22","until":1793145600000,"n":1},{"code":"10213GE308","name":"Professional Communication for Engineers","dow":5,"s":"11:45","e":"12:35","frm":"2026-09-18","until":1793145600000,"n":1},{"code":"10211CS223","name":"Machine Learning Techniques","dow":5,"s":"09:45","e":"10:35","frm":"2026-09-18","until":1789756199000,"n":1},{"code":"10213GE308","name":"Professional Communication for Engineers","dow":3,"s":"14:45","e":"15:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10210CH104","name":"Environmental Science and Sustainability","dow":3,"s":"15:45","e":"16:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10212CS217","name":"Data Science","dow":1,"s":"13:45","e":"14:35","frm":"2026-09-21","until":1793145600000,"n":1},{"code":"10212CS217","name":"Data Science","dow":5,"s":"13:45","e":"15:35","frm":"2026-09-18","until":1793145600000,"n":2},{"code":"MINOR","name":"Minor Project - I","dow":6,"s":"12:45","e":"13:35","frm":"2026-09-19","until":1793145600000,"n":1},{"code":"10211CS129","name":"Modern Computer Architecture","dow":5,"s":"10:45","e":"11:35","frm":"2026-09-18","until":1793145600000,"n":1},{"code":"10212CS217","name":"Data Science","dow":3,"s":"10:45","e":"11:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10211CS129","name":"Modern Computer Architecture","dow":3,"s":"13:45","e":"14:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10211CS223","name":"Machine Learning Techniques","dow":3,"s":"11:45","e":"12:35","frm":"2026-09-23","until":1793145600000,"n":1},{"code":"10212CS295","name":"Applied Programming Skills","dow":2,"s":"13:45","e":"14:35","frm":"2026-09-22","until":1793145600000,"n":1},{"code":"10211CS129","name":"Modern Computer Architecture","dow":2,"s":"08:45","e":"09:35","frm":"2026-09-22","until":1793145600000,"n":1},{"code":"10212CS295","name":"Applied Programming Skills","dow":1,"s":"08:45","e":"09:35","frm":"2026-09-21","until":1792434599000,"n":1},{"code":"10211CS223","name":"Machine Learning Techniques","dow":1,"s":"14:45","e":"16:35","frm":"2026-09-21","until":1793145600000,"n":2},{"code":"10212CS295","name":"Applied Programming Skills","dow":4,"s":"08:45","e":"11:35","frm":"2026-09-17","until":1789669799000,"n":3},{"code":"10210CH104","name":"Environmental Science and Sustainability","dow":4,"s":"15:45","e":"16:35","frm":"2026-09-17","until":1789669799000,"n":1},{"code":"10211CS208","name":"Software Engineering","dow":4,"s":"11:45","e":"12:35","frm":"2026-09-17","until":1789669799000,"n":1},{"code":"10211CS208","name":"Software Engineering","dow":4,"s":"13:45","e":"15:35","frm":"2026-09-17","until":1789669799000,"n":2},{"code":"10212CS295","name":"Applied Programming Skills","dow":4,"s":"08:45","e":"11:35","frm":"2026-09-24","until":1793145600000,"n":3},{"code":"10211CS208","name":"Software Engineering","dow":4,"s":"11:45","e":"12:35","frm":"2026-09-24","until":1793145600000,"n":1},{"code":"10211CS208","name":"Software Engineering","dow":4,"s":"13:45","e":"15:35","frm":"2026-09-24","until":1793145600000,"n":2},{"code":"10210CH104","name":"Environmental Science and Sustainability","dow":4,"s":"15:45","e":"16:35","frm":"2026-09-24","until":1793145600000,"n":1},{"code":"10212CS217","name":"Data Science","dow":5,"s":"08:45","e":"09:35","frm":"2026-09-25","until":1793145600000,"n":1},{"code":"10211CS223","name":"Machine Learning Techniques","dow":5,"s":"09:45","e":"10:35","frm":"2026-09-25","until":1793145600000,"n":1}];
+const IDX={};D.forEach((d,i)=>IDX[d.code]=i);
+function occ(ds){const [y,m,d]=ds.split("-").map(Number),dow=new Date(y,m-1,d).getDay();
+ return SCHED.filter(x=>{if(x.dow!==dow||ds<x.frm)return false;if(x.until===null)return ds===x.frm;const [h,mi]=x.s.split(":").map(Number);return Date.UTC(y,m-1,d,h,mi)-330*60000<=x.until})}
+function schedRemain(){const r=D.map(()=>0),t=new Date();t.setHours(0,0,0,0);const ts=ymd(t),maxU=Math.max(...SCHED.map(x=>x.until||0))+86400000;
+ for(let d=new Date(t);d.getTime()<=maxU;d.setDate(d.getDate()+1)){const ds=ymd(d);occ(ds).forEach(x=>{const i=IDX[x.code];if(i==null)return;if(ds===ts&&LOG.some(l=>l.d===ds&&l.i===i))return;r[i]+=x.n})}return r}
+function dayRows(){const dt=$("day").value,by={};
+ occ(dt).sort((a,b)=>a.s.localeCompare(b.s)).forEach(x=>{const b=by[x.code]=by[x.code]||{i:IDX[x.code],name:x.name,w:0,t:[]};b.w+=x.n;b.t.push(x.s+"–"+x.e)});
+ const rows=Object.values(by).map(b=>({...b,t:b.t.join(", ")}));
+ if($("showall").checked)D.forEach((d,i)=>{if(!rows.some(r=>r.i===i))rows.push({i,name:d.name,w:1,t:"not scheduled"})});
+ return rows}
+function toast(m){const t=$("toast");t.textContent=m;t.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.opacity=0,1800)}
+function setMark(i,st,w){if(st)toast(st==="P"?"🎉 Present +"+(w||1)+" session(s)":"😬 Absent +"+(w||1)+" session(s)");const dt=$("day").value;LOG=LOG.filter(l=>!(l.d===dt&&l.i===i));if(st)LOG.push({d:dt,i,s:st,w:w||1});save();recompute();all(true)}
+function daily(){
+ const dt=$("day").value,rows=dayRows();
+ $("mark").innerHTML=rows.length?rows.map(r=>{
+  if(r.i==null)return `<div class="mrow"><span>${r.name} <span style="color:var(--muted)">· ${r.t} · not tracked in attendance</span></span></div>`;
+  const l=LOG.find(x=>x.d===dt&&x.i===r.i),st=l?l.s:"",d=D[r.i];
+  return `<div class="mrow"><span>${r.name} <span style="color:var(--muted)">· ${r.w} period${r.w>1?"s":""} · ${r.t} · now ${d.held?(d.p/d.held*100).toFixed(0):0}%</span></span><span class="mb"><button class="b ${st==="P"?"on p":""}" data-i="${r.i}" data-w="${r.w}" data-s="P">Present</button><button class="b ${st==="A"?"on a":""}" data-i="${r.i}" data-w="${r.w}" data-s="A">Absent</button><button class="b" data-i="${r.i}" data-w="${r.w}" data-s="">Clear</button></span></div>`}).join(""):'<div class="note">No classes scheduled on this day. Tick "Show all courses" to mark manually.</div>';
+ document.querySelectorAll("#mark .b").forEach(b=>b.onclick=()=>setMark(+b.dataset.i,b.dataset.s,+b.dataset.w));
+}
+let tcx;
+function ttRender(){
+ const sel=$("day").value.split("-").map(Number),base=new Date(sel[0],sel[1]-1,sel[2]);base.setDate(base.getDate()-((base.getDay()+6)%7));
+ const pal=["#4f7cff","#16a34a","#f59e0b","#dc2626","#8b5cf6","#06b6d4","#ec4899","#84cc16","#f97316","#64748b"],nm=["Mon","Tue","Wed","Thu","Fri","Sat"],per=[],ts=ymd(new Date());let h="";
+ for(let k=0;k<6;k++){const d=new Date(base);d.setDate(base.getDate()+k);const ds=ymd(d),o=occ(ds).sort((a,b)=>a.s.localeCompare(b.s));per.push(o.reduce((a,x)=>a+x.n,0));
+  h+=`<div><div class="dh ${ds===ts?"today":""}">${nm[k]} ${d.getDate()}/${d.getMonth()+1}${ds===ts?" · today":""}</div>`+(o.length?o.map(x=>{const i=IDX[x.code];return `<div class="blk" style="border-color:${i==null?"#64748b":pal[i%10]}"><b>${x.name}</b><span>${x.s}–${x.e} · ${x.n} period${x.n>1?"s":""}</span></div>`}).join(""):'<div class="note">No class</div>')+"</div>"}
+ $("tt").innerHTML=h;
+ if(tcx)tcx.destroy();
+ tcx=new Chart($("c11"),{type:"bar",data:{labels:nm,datasets:[{label:"Periods",data:per,backgroundColor:css("--acc"),borderRadius:6}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:css("--line")}},y:{grid:{color:css("--line")},beginAtZero:true,title:{display:true,text:"Periods per day"}}}}});
+}
+function leave(){
+ const a=$("lf").value,b=$("lt").value;if(!a||!b||b<a){$("lsum").textContent="Pick a valid date range.";$("lv").innerHTML="";return}
+ const miss=D.map(()=>0);let days=0,tot=0;
+ const p1=a.split("-").map(Number),p2=b.split("-").map(Number);
+ for(let d=new Date(p1[0],p1[1]-1,p1[2]),e=new Date(p2[0],p2[1]-1,p2[2]);d<=e;d.setDate(d.getDate()+1)){days++;occ(ymd(d)).forEach(x=>{const i=IDX[x.code];if(i!=null){miss[i]+=x.n;tot+=x.n}})}
+ const R=req();
+ $("lsum").innerHTML=`<b>${days}</b> day(s), <b>${tot}</b> tracked periods missed.`;
+ $("lv").innerHTML="<tr><th>Course</th><th>Periods missed</th><th>Now</th><th>After leave</th><th>Status</th></tr>"+D.map((d,i)=>{const now=d.held?d.p/d.held*100:0,aft=d.p/(d.held+miss[i])*100;return `<tr><td>${d.name}</td><td>${miss[i]}</td><td>${now.toFixed(1)}%</td><td><b>${aft.toFixed(1)}%</b></td><td><span class="pill" style="background:${col(aft)}">${aft>=R?"Safe":"Below "+R+"%"}</span></td></tr>`}).join("");
+}
+{const t=new Date();t.setDate(t.getDate()+1);$("lf").value=$("lt").value=ymd(t)}
+["lf","lt"].forEach(i=>$(i).oninput=leave);
+$("showall").onchange=()=>daily();
+$("day").oninput=()=>{daily();ttRender()};
+const bulkDay=st=>{const dt=$("day").value,rows=dayRows().filter(r=>r.i!=null);LOG=LOG.filter(l=>!(l.d===dt&&rows.some(r=>r.i===l.i)));if(st)rows.forEach(r=>LOG.push({d:dt,i:r.i,s:st,w:r.w}));save();recompute();all(true)};
+$("allp").onclick=()=>bulkDay("P");$("alla").onclick=()=>bulkDay("A");$("allc").onclick=()=>bulkDay("");
+let lc=[];
+function logAnalysis(){
+ lc.forEach(c=>c.destroy());lc=[];
+ const ln=css("--line"),days=[...new Set(LOG.map(l=>l.d))].sort();
+ const W=l=>l.w||1;const P=LOG.filter(l=>l.s==="P").reduce((a,l)=>a+W(l),0),A=LOG.reduce((a,l)=>a+W(l),0)-P;
+ const dayA=d=>LOG.some(l=>l.d===d&&l.s==="A");
+ let streak=0;for(let k=days.length-1;k>=0;k--){if(dayA(days[k]))break;streak++}
+ $("lk").innerHTML=[["Days logged",days.length],["Present sessions",P],["Absent sessions",A],["No-absence streak",streak+" day(s)"]].map(x=>`<div class="card kpi"><div class="l">${x[0]}</div><div class="v">${x[1]}</div></div>`).join("");
+ $("logempty").style.display=days.length?"none":"block";
+ // trend
+ let bp=BASE.reduce((a,b)=>a+b.p,0),bh=BASE.reduce((a,b)=>a+b.held,0);
+ const tr=[{x:"Start",y:bh?bp/bh*100:0}];
+ days.forEach(d=>{LOG.filter(l=>l.d===d).forEach(l=>{bh+=W(l);if(l.s==="P")bp+=W(l)});tr.push({x:d.slice(5),y:bp/bh*100})});
+ lc.push(new Chart($("c9"),{type:"line",data:{labels:tr.map(t=>t.x),datasets:[{label:"Combined %",data:tr.map(t=>+t.y.toFixed(1)),borderColor:css("--acc"),backgroundColor:"rgba(79,124,255,.15)",fill:true,tension:.3},{label:"Required",data:tr.map(()=>req()),borderColor:css("--bad"),borderDash:[5,4],pointRadius:0}]},options:{maintainAspectRatio:false,scales:{x:{grid:{color:ln}},y:{grid:{color:ln},suggestedMin:50,max:100}}}}));
+ // weekday
+ const wd=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],wp=Array(7).fill(0),wa=Array(7).fill(0);
+ LOG.forEach(l=>{const g=new Date(l.d+"T00:00:00").getDay();l.s==="P"?wp[g]+=W(l):wa[g]+=W(l)});
+ lc.push(new Chart($("c10"),{type:"bar",data:{labels:wd,datasets:[{label:"Present",data:wp,backgroundColor:css("--ok"),borderRadius:4},{label:"Absent",data:wa,backgroundColor:css("--bad"),borderRadius:4}]},options:{maintainAspectRatio:false,scales:{x:{stacked:true,grid:{color:ln}},y:{stacked:true,grid:{color:ln},beginAtZero:true}}}}));
+ // heatmap
+ const end=new Date();end.setHours(0,0,0,0);const st=new Date(end);st.setDate(st.getDate()-34);
+ let h=wd.map(x=>`<div style="background:none">${x}</div>`).join("")+Array(st.getDay()).fill('<div style="background:none"></div>').join("");
+ for(let k=0;k<35;k++){const t=new Date(st);t.setDate(st.getDate()+k);const d=ymd(t),m=LOG.filter(l=>l.d===d),a=m.filter(l=>l.s==="A").reduce((x,l)=>x+W(l),0),p=m.reduce((x,l)=>x+W(l),0)-a;
+  const c=!m.length?"":a===0?css("--ok"):p===0?css("--bad"):css("--warn");
+  h+=`<div title="${d}: ${p} present, ${a} absent" style="${c?"background:"+c+";color:#fff":""}">${t.getDate()}</div>`}
+ $("heat").innerHTML=h;
+ // table
+ const rec=[...LOG].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,25);
+ $("logt").innerHTML="<tr><th>Date</th><th>Course</th><th>Status</th><th></th></tr>"+(rec.length?rec.map(l=>`<tr><td>${l.d}</td><td>${short(D[l.i])}</td><td><span class="pill" style="background:${l.s==="P"?css("--ok"):css("--bad")}">${l.s==="P"?"Present":"Absent"}${(l.w||1)>1?" ×"+l.w:""}</span></td><td><button class="b" data-d="${l.d}" data-i="${l.i}">Delete</button></td></tr>`).join(""):"<tr><td colspan=4>Nothing yet</td></tr>");
+ document.querySelectorAll("#logt .b").forEach(b=>b.onclick=()=>{LOG=LOG.filter(l=>!(l.d===b.dataset.d&&l.i==+b.dataset.i));save();recompute();all(true)});
+ // weekly insight
+ const now=new Date(),mon=new Date(now);mon.setDate(now.getDate()-((now.getDay()+6)%7));const ms=ymd(mon);
+ const wk=LOG.filter(l=>l.d>=ms),wP=wk.filter(l=>l.s==="P").reduce((a,l)=>a+W(l),0),wT=wk.reduce((a,l)=>a+W(l),0);
+ $("ins").insertAdjacentHTML("beforeend",`<li>This week so far: <b>${wP}</b> present, <b>${wT-wP}</b> absent (sessions).</li>`);
+}
+["bm","bn"].forEach(i=>$(i).oninput=extra);
+function ring(p,z,r,c,t){const C=2*Math.PI*r,o=C*(1-Math.min(p,100)/100),m=z/2;return `<svg width="${z}" height="${z}" viewBox="0 0 ${z} ${z}"><circle cx="${m}" cy="${m}" r="${r}" fill="none" stroke="rgba(128,128,128,.28)" stroke-width="${z/11}"/><circle class="rv" cx="${m}" cy="${m}" r="${r}" fill="none" stroke="${c}" stroke-width="${z/11}" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${o}" style="--C:${C}" transform="rotate(-90 ${m} ${m})"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="${z/5}" font-weight="700">${t}</text></svg>`}
+function hero(){
+ const R=req(),P=D.reduce((a,d)=>a+d.p,0),H=D.reduce((a,d)=>a+d.held,0),c=H?P/H*100:0;
+ const days=[...new Set(LOG.map(l=>l.d))].sort();let st=0;for(let k=days.length-1;k>=0;k--){if(LOG.some(l=>l.d===days[k]&&l.s==="A"))break;st++}
+ const title=c>=90?"Attendance Legend 👑":c>=R+5?"Cruising in the Safe Zone 😎":c>=R?"Hanging on the edge 😅":"Danger Zone – time to show up 🚨";
+ const now=new Date(),hm=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0"),tod=occ(ymd(now)).sort((a,b)=>a.s.localeCompare(b.s)),nx=tod.find(x=>x.s>hm);
+ $("hero").innerHTML=`<div>${ring(c,150,62,c>=R?"#7dffb0":"#ffd1c9",c.toFixed(0)+"%")}</div><div><div class="ht">${title}</div><div class="hs">${P}/${H} sessions attended · ${st}-day no-absence streak</div><div class="hs">${nx?"⏭️ Next: <b>"+nx.name+"</b> at "+nx.s:tod.length?"✅ No more classes today":"🌴 No classes today"}</div></div>`;
+ $("cards").innerHTML=D.map(d=>{const p=d.held?d.p/d.held*100:0,k=calc(d),ok=p>=R,c2=col(p),mo=p>=90?"🤩":ok?"😎":p>=R-10?"😬":"😱";
+  return `<div class="card cc" style="border-top:4px solid ${c2}">${ring(p,84,34,c2,p.toFixed(0)+"%")}<div><div style="font-weight:700;font-size:14px">${mo} ${short(d)}</div><div class="note" style="margin:2px 0">${d.p}/${d.held} sessions</div><span class="pill" style="background:${c2}">${ok?"Can skip "+k.skip:"Attend "+k.need+" in a row"}</span></div></div>`}).join("");
+ const B=[["🔥","3-day streak",st>=3],["🛡️","All courses safe",D.every(d=>d.held&&d.p/d.held*100>=R)],["👑","90% club",c>=90],["💯","A perfect course",D.some(d=>d.held>5&&d.p===d.held)],["🌱","First log",LOG.length>0],["📆","7 days logged",days.length>=7]];
+ $("badges").innerHTML="<h2>🏅 Achievements</h2><div class='bd'>"+B.map(b=>`<div class="bdg ${b[2]?"on":""}"><span>${b[0]}</span>${b[1]}</div>`).join("")+"</div>";
+}
+function all(keepEdit){hero();kpis();table();draw();planner();extra();logAnalysis();sim();daily();ttRender();leave();if(!keepEdit)editTbl();}
+$("simc").innerHTML=D.map((d,i)=>`<option value="${i}">${d.code} – ${short(d)}</option>`).join("");
+["req","metric","tgt","remsrc"].forEach(i=>$(i).oninput=all);$("go").onclick=sim;
+matchMedia("(prefers-color-scheme:dark)").onchange=all;
+all();
+</script></body></html>
