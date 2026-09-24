@@ -3,10 +3,11 @@ import { Transaction, Habit, CATEGORIES, CAT_DOT } from "./data/mockData";
 import Dashboard from "./pages/Dashboard";
 import AllEntries from "./pages/AllEntries";
 import HabitsPage from "./pages/HabitsPage";
+import AttendancePage from "./pages/AttendancePage";
 import ToastContainer, { ToastMessage } from "./components/Toast";
 import PullToRefresh from "./components/PullToRefresh";
 
-type Page = "dashboard" | "entries" | "habits";
+type Page = "dashboard" | "entries" | "habits" | "attendance";
 
 const fmt = (n: number) =>
   "₹" + Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -228,6 +229,9 @@ export default function App() {
           <button className={`nav-item ${page === "habits" ? "active" : ""}`} onClick={() => setPage("habits")}>
             <span style={{ fontSize: "0.8rem" }}>◎</span> Habits
           </button>
+          <button className={`nav-item ${page === "attendance" ? "active" : ""}`} onClick={() => setPage("attendance")}>
+            <span style={{ fontSize: "0.8rem" }}>📊</span> Attendance
+          </button>
         </nav>
 
         <div className="sidebar-section-label">
@@ -268,6 +272,8 @@ export default function App() {
             <Dashboard transactions={filteredTransactions} catTotals={catTotals} catCounts={catCounts} />
           ) : page === "entries" ? (
             <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} metadata={metadata} />
+          ) : page === "attendance" ? (
+            <AttendancePage />
           ) : (
             <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} onUpdateMeta={updateHabitMeta} showToast={showToast} todayMood={todayMood} onUpdateMood={updateMood} />
           )}
@@ -283,6 +289,9 @@ export default function App() {
         </button>
         <button className={`bnav-item ${page === "habits" ? "active" : ""}`} onClick={() => setPage("habits")}>
           <span>◎</span><div className="bnav-label">Habits</div>
+        </button>
+        <button className={`bnav-item ${page === "attendance" ? "active" : ""}`} onClick={() => setPage("attendance")}>
+          <span>📊</span><div className="bnav-label">Attend</div>
         </button>
       </nav>
 
