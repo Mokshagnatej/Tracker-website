@@ -16,7 +16,7 @@ const fmtShort = (n: number) =>
   "₹" + Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const todayStr = () => new Date().toISOString().split("T")[0];
 
-type Filter = "all" | "Income" | "Expense";
+type Filter = "all" | "Income" | "Expense" | "Add Cash";
 type SortKey = "date" | "amount" | "name";
 type SortDir = "asc" | "desc";
 
@@ -49,7 +49,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
     return list;
   }, [transactions, filter, search, sortKey, sortDir]);
 
-  const totalIncome = useMemo(() => filtered.filter((t) => t.type === "Income").reduce((s, t) => s + t.amount, 0), [filtered]);
+  const totalIncome = useMemo(() => filtered.filter((t) => t.type === "Income" || t.type === "Add Cash").reduce((s, t) => s + t.amount, 0), [filtered]);
   const totalExpense = useMemo(() => filtered.filter((t) => t.type === "Expense").reduce((s, t) => s + t.amount, 0), [filtered]);
 
   const toggleSort = (key: SortKey) => {
@@ -84,12 +84,12 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
         <div className="card" style={{ marginBottom:"1.25rem" }}>
           <div style={{ fontWeight:600,fontSize:"0.95rem",marginBottom:"1rem" }}>Record Transaction</div>
           <div style={{ display:"flex",gap:"0.5rem",marginBottom:"1rem" }}>
-            {(["Expense","Income"] as const).map(t=>(
-              <button key={t} type="button" onClick={()=>setTxType(t)} className="btn" style={{flex:1,fontSize:"0.83rem",padding:"0.5rem",background:txType===t?(t==="Expense"?"#fef2f2":"#f0fdf4"):"transparent",border:`1px solid ${txType===t?(t==="Expense"?"#fecaca":"#bbf7d0"):"var(--border)"}`,color:txType===t?(t==="Expense"?"#dc2626":"#16a34a"):"var(--text-2)"}}>{t==="Expense"?"📤":"📥"} {t}</button>
+            {(["Expense","Income","Add Cash"] as const).map(t=>(
+              <button key={t} type="button" onClick={()=>setTxType(t)} className="btn" style={{flex:1,fontSize:"0.83rem",padding:"0.5rem",background:txType===t?(t==="Expense"?"#fef2f2":t==="Income"?"#f0fdf4":"#eff6ff"):"transparent",border:`1px solid ${txType===t?(t==="Expense"?"#fecaca":t==="Income"?"#bbf7d0":"#bfdbfe"):"var(--border)"}`,color:txType===t?(t==="Expense"?"#dc2626":t==="Income"?"#16a34a":"#2563eb"):"var(--text-2)"}}>{t==="Expense"?"📤":t==="Income"?"📥":"💰"} {t}</button>
             ))}
           </div>
           <form onSubmit={submit} style={{ display:"flex",flexDirection:"column",gap:"0.65rem" }}>
-            <input className="input" placeholder={txType==="Income"?"Income source…":"What did you spend on?"} value={name} onChange={e=>setName(e.target.value)} required/>
+            <input className="input" placeholder={txType==="Income"?"Income source…":txType==="Add Cash"?"Source of cash…":"What did you spend on?"} value={name} onChange={e=>setName(e.target.value)} required/>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.65rem" }}>
               <input className="input" type="number" placeholder="Amount (₹)" value={amount} onChange={e=>setAmount(e.target.value)} required min="0" step="0.01"/>
               <input className="input" type="date" value={date} onChange={e=>setDate(e.target.value)} required/>
@@ -98,7 +98,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
               <select className="input" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Category…</option>{metadata ? metadata.categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>) : CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
               <select className="input" value={account} onChange={e=>setAccount(e.target.value)}><option value="">Account…</option>{metadata ? metadata.accounts.map(a=><option key={a.id} value={a.name}>{a.name}</option>) : ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}</select>
             </div>
-            <button type="submit" className={`btn ${txType==="Income"?"btn-success":"btn-danger"}`} style={{width:"100%",justifyContent:"center"}}>{txType==="Expense"?"Record Expense":"Record Income"} →</button>
+            <button type="submit" className={`btn ${txType==="Income"?"btn-success":txType==="Add Cash"?"btn-primary":"btn-danger"}`} style={{width:"100%",justifyContent:"center"}}>{txType==="Expense"?"Record Expense":txType==="Income"?"Record Income":"Add Cash"} →</button>
           </form>
         </div>
       )}
@@ -117,7 +117,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
 
 
       <div style={{ display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"0.85rem",flexWrap:"wrap" }}>
-        <div className="chips">{(["all","Income","Expense"] as const).map(f=>(<button key={f} onClick={()=>setFilter(f)} className={`chip${filter===f?" active":""}`}>{f==="all"?"All":f}</button>))}</div>
+        <div className="chips">{(["all","Income","Expense","Add Cash"] as const).map(f=>(<button key={f} onClick={()=>setFilter(f)} className={`chip${filter===f?" active":""}`}>{f==="all"?"All":f}</button>))}</div>
         <div style={{ flex:1,minWidth:160,position:"relative" }}>
           <input className="input" placeholder="Search by name, category, account…" value={search} onChange={e=>setSearch(e.target.value)} style={{ paddingLeft:"2rem" }}/>
           <span style={{position:"absolute",left:"0.65rem",top:"50%",transform:"translateY(-50%)",fontSize:"0.8rem",color:"#9ca3af",pointerEvents:"none"}}>🔍</span>
@@ -143,11 +143,11 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
             </thead>
             <tbody>
               {filtered.map(t=>{
-                const isIncome=t.type==="Income";
+                const isIncome=t.type==="Income"||t.type==="Add Cash";
                 const color=CAT_COLOR[t.category]||"#94a3b8";
                 return (
                   <tr key={t.id}>
-                    <td><div style={{display:"flex",alignItems:"center",gap:"0.6rem"}}><span style={{width:30,height:30,borderRadius:8,flexShrink:0,background:`${color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.95rem"}}>{CAT_ICON[t.category]||"◈"}</span><div><div>{t.name}</div><div style={{fontSize:"0.7rem",color:"#9ca3af"}}><span style={{display:"inline-block",padding:"0 0.4rem",borderRadius:99,background:isIncome?"#f0fdf4":"#fff5f5",color:isIncome?"#16a34a":"#dc2626",fontWeight:600,fontSize:"0.65rem"}}>{t.type}</span></div></div></div></td>
+                    <td><div style={{display:"flex",alignItems:"center",gap:"0.6rem"}}><span style={{width:30,height:30,borderRadius:8,flexShrink:0,background:`${color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.95rem"}}>{CAT_ICON[t.category]||"◈"}</span><div><div>{t.name}</div><div style={{fontSize:"0.7rem",color:"#9ca3af"}}><span style={{display:"inline-block",padding:"0 0.4rem",borderRadius:99,background:t.type==="Expense"?"#fff5f5":t.type==="Income"?"#f0fdf4":"#eff6ff",color:t.type==="Expense"?"#dc2626":t.type==="Income"?"#16a34a":"#2563eb",fontWeight:600,fontSize:"0.65rem"}}>{t.type}</span></div></div></div></td>
                     <td><div style={{display:"flex",alignItems:"center",gap:"0.4rem"}}><span style={{width:8,height:8,borderRadius:"50%",background:color,flexShrink:0}}/>{t.category}</div></td>
                     <td><span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#f5f5f3",borderRadius:6,padding:"0.18rem 0.5rem",fontSize:"0.78rem",fontWeight:500}}>{t.account}</span></td>
                     <td style={{fontFamily:"monospace",fontSize:"0.8rem"}}>{t.date}</td>

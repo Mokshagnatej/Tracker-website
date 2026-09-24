@@ -27,7 +27,7 @@ function getDailyData(txns: Transaction[], days = 30) {
     const date = d.toISOString().split("T")[0];
     const label = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
     const expense = txns.filter((t) => t.date === date && t.type === "Expense").reduce((s, t) => s + t.amount, 0);
-    const income = txns.filter((t) => t.date === date && t.type === "Income").reduce((s, t) => s + t.amount, 0);
+    const income = txns.filter((t) => t.date === date && (t.type === "Income" || t.type === "Add Cash")).reduce((s, t) => s + t.amount, 0);
     return { date, label, expense, income, net: income - expense };
   });
 }
@@ -60,7 +60,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
   const [catSort, setCatSort] = useState<"amount" | "count">("amount");
 
   const expenses = transactions.filter((t) => t.type === "Expense");
-  const incomes = transactions.filter((t) => t.type === "Income");
+  const incomes = transactions.filter((t) => t.type === "Income" || t.type === "Add Cash");
   const totalSpent = expenses.reduce((s, t) => s + t.amount, 0);
   const totalIncome = incomes.reduce((s, t) => s + t.amount, 0);
   const netBalance = totalIncome - totalSpent;
@@ -180,7 +180,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
         const acctMap: Record<string, { income: number; expense: number }> = {};
         transactions.forEach((t) => {
           if (!acctMap[t.account]) acctMap[t.account] = { income: 0, expense: 0 };
-          if (t.type === "Income") acctMap[t.account].income += t.amount;
+          if (t.type === "Income" || t.type === "Add Cash") acctMap[t.account].income += t.amount;
           else acctMap[t.account].expense += t.amount;
         });
         const acctList = Object.entries(acctMap)
@@ -335,7 +335,7 @@ export default function Dashboard({ transactions, catTotals }: Props) {
           </div>
           <ul style={{ listStyle:"none",margin:0,padding:0 }}>
             {recentTxns.map((t,i)=>{
-              const isIncome=t.type==="Income";
+              const isIncome=t.type==="Income"||t.type==="Add Cash";
               const color=CAT_COLOR[t.category]||"#94a3b8";
               return (
                 <li key={t.id} style={{display:"flex",alignItems:"center",gap:"0.6rem",padding:"0.65rem 1.25rem",borderBottom:i<recentTxns.length-1?"1px solid #f7f7f5":"none",transition:"background 0.12s"}}

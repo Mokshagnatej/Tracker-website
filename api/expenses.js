@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
                 Name: { title: [{ text: { content: data.name } }] },
                 Amount: { number: data.amount },
                 Date: { date: { start: dateStr } },
-                Type: { select: { name: data.type === 'Income' ? 'Income' : 'Expense' } }
+                Type: { select: { name: data.type === 'Income' ? 'Income' : (data.type === 'Add Cash' ? 'Add Cash' : 'Expense') } }
             };
 
             if (data.categoryId) {
@@ -109,7 +109,7 @@ module.exports = async function handler(req, res) {
                 name: data.name,
                 amount: data.amount,
                 date: dateStr,
-                type: data.type === 'Income' ? 'Income' : 'Expense',
+                type: data.type === 'Income' ? 'Income' : (data.type === 'Add Cash' ? 'Add Cash' : 'Expense'),
                 categoryId: data.categoryId || null,
                 accountId: data.accountId || null
             };
