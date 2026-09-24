@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
+  build: {
+    chunkSizeWarningLimit: 700,
+  },
   server: {
     host: '0.0.0.0',
     port: 8443,
