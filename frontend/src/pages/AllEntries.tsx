@@ -60,7 +60,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !amount) return;
-    onAdd({ id: Date.now().toString(), name: name.trim(), amount: parseFloat(amount), type: txType, category: category || "Other", account: account || "Cash", date });
+    onAdd({ id: Date.now().toString(), name: name.trim(), amount: parseFloat(amount), type: txType, category: txType === "Add Cash" ? "Add Cash" : (category || "Other"), account: txType === "Add Cash" ? "Cash" : (account || "Cash"), date });
     showToast(`${txType} recorded`);
     setName(""); setAmount(""); setDate(todayStr()); setCategory(""); setAccount(""); setFormOpen(false);
   };
@@ -95,8 +95,17 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
               <input className="input" type="date" value={date} onChange={e=>setDate(e.target.value)} required/>
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.65rem" }}>
-              <select className="input" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Category…</option>{metadata ? metadata.categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>) : CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
-              <select className="input" value={account} onChange={e=>setAccount(e.target.value)}><option value="">Account…</option>{metadata ? metadata.accounts.map(a=><option key={a.id} value={a.name}>{a.name}</option>) : ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}</select>
+              {txType === "Add Cash" ? (
+                <>
+                  <input className="input" value="Add Cash" disabled style={{ background: "var(--bg)", color: "var(--text-2)", opacity: 0.7, cursor: "not-allowed" }} />
+                  <input className="input" value="Cash" disabled style={{ background: "var(--bg)", color: "var(--text-2)", opacity: 0.7, cursor: "not-allowed" }} />
+                </>
+              ) : (
+                <>
+                  <select className="input" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Category…</option>{metadata ? metadata.categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>) : CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
+                  <select className="input" value={account} onChange={e=>setAccount(e.target.value)}><option value="">Account…</option>{metadata ? metadata.accounts.map(a=><option key={a.id} value={a.name}>{a.name}</option>) : ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}</select>
+                </>
+              )}
             </div>
             <button type="submit" className={`btn ${txType==="Income"?"btn-success":txType==="Add Cash"?"btn-primary":"btn-danger"}`} style={{width:"100%",justifyContent:"center"}}>{txType==="Expense"?"Record Expense":txType==="Income"?"Record Income":"Add Cash"} →</button>
           </form>
