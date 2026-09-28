@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 
 // Load .env.local for local dev; on Render, env vars are set in the dashboard
 dotenv.config({ path: path.resolve(__dirname, '.env.local') });
@@ -41,12 +42,17 @@ app.delete('/api/attendance/log', (req, res) => require('./api/attendance.js')(r
 app.put('/api/attendance/reset', (req, res) => require('./api/attendance.js')(req, res));
 app.post('/api/attendance/restore', (req, res) => require('./api/attendance.js')(req, res));
 
-// Serve static frontend
-app.use(express.static(path.join(__dirname, 'dist')));
+// Serve static frontend. Prefer `dist` (production build); fall back to `public` for local/dev.
+const staticDir = fs.existsSync(path.join(__dirname, 'dist'))
+  ? 'dist'
+  : fs.existsSync(path.join(__dirname, 'public'))
+    ? 'public'
+    : 'dist';
+app.use(express.static(path.join(__dirname, staticDir)));
 
-// SPA fallback — serve index.html for all non-API routes
+// SPA fallback — serve index.html from the chosen static dir for all non-API routes
 app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, staticDir, 'index.html'));
 });
 
 // Global error handler — prevents crash on unhandled errors
