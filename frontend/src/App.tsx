@@ -7,8 +7,9 @@ import AttendancePage from "./pages/AttendancePage";
 import ToastContainer, { ToastMessage } from "./components/Toast";
 import PullToRefresh from "./components/PullToRefresh";
 import AuthGate from "./components/AuthGate";
+import SettingsPage from "./pages/SettingsPage";
 
-type Page = "dashboard" | "entries" | "habits" | "attendance";
+type Page = "dashboard" | "entries" | "habits" | "attendance" | "settings";
 
 const fmt = (n: number) =>
   "₹" + Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -234,6 +235,9 @@ export default function App() {
           <button className={`nav-item ${page === "attendance" ? "active" : ""}`} onClick={() => setPage("attendance")}>
             <span style={{ fontSize: "0.8rem" }}>📊</span> Attendance
           </button>
+          <button className={`nav-item ${page === "settings" ? "active" : ""}`} onClick={() => setPage("settings")}>
+            <span style={{ fontSize: "0.8rem" }}>⚙️</span> Settings
+          </button>
         </nav>
 
         <div className="sidebar-section-label">
@@ -276,6 +280,8 @@ export default function App() {
             <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} metadata={metadata} />
           ) : page === "attendance" ? (
             <AttendancePage />
+          ) : page === "settings" ? (
+            <SettingsPage />
           ) : (
             <HabitsPage habits={habits} onToggle={toggleHabit} onAdd={addHabit} onDelete={deleteHabit} onUpdateMeta={updateHabitMeta} showToast={showToast} todayMood={todayMood} onUpdateMood={updateMood} />
           )}
@@ -294,6 +300,9 @@ export default function App() {
         </button>
         <button className={`bnav-item ${page === "attendance" ? "active" : ""}`} onClick={() => setPage("attendance")}>
           <span>📊</span><div className="bnav-label">Attend</div>
+        </button>
+        <button className={`bnav-item ${page === "settings" ? "active" : ""}`} onClick={() => setPage("settings")}>
+          <span>⚙️</span><div className="bnav-label">Set</div>
         </button>
       </nav>
 

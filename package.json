@@ -6,13 +6,13 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev:ui": "vite",
-    "dev:api": "node server.js",
+    "dev:ui": "vite frontend",
+    "dev:api": "node backend/server.js",
     "dev": "concurrently \"npm run dev:ui\" \"npm run dev:api\"",
     "postinstall": "npm run build",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "node server.js"
+    "build": "vite build frontend",
+    "preview": "vite preview frontend",
+    "start": "node backend/server.js"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

@@ -14,8 +14,8 @@ export default function AuthGate({ children }: AuthGateProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("moksha_auth");
-    if (token === "authenticated") {
+    const token = localStorage.getItem("moksha_token");
+    if (token) {
       setAuthenticated(true);
     }
     setChecking(false);
@@ -32,10 +32,11 @@ export default function AuthGate({ children }: AuthGateProps) {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: password.trim() }),
+        body: JSON.stringify({ action: "login", password: password.trim() }),
       });
       if (res.ok) {
-        sessionStorage.setItem("moksha_auth", "authenticated");
+        const data = await res.json();
+        localStorage.setItem("moksha_token", data.token);
         setAuthenticated(true);
       } else {
         setError("Wrong password. Try again.");

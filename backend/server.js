@@ -4,8 +4,8 @@ const path = require('path');
 const fs = require('fs');
 
 // Load .env.local for local dev; on Render, env vars are set in the dashboard
-dotenv.config({ path: path.resolve(__dirname, '.env.local') });
-dotenv.config({ path: path.resolve(__dirname, '.env') }); // also check .env as fallback
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') }); // also check .env as fallback
 
 const app = express();
 app.use(express.json());
@@ -15,6 +15,12 @@ app.use((req, res, next) => {
     console.log(`[REQ] ${req.method} ${req.url}`);
     next();
 });
+
+// Auth API (unprotected)
+app.post('/api/auth', (req, res) => require('./api/auth.js')(req, res));
+
+// Protect all other API routes
+app.use('/api', (req, res, next) => require('./lib/auth.js').verifyToken(req, res, next));
 
 // API routes
 app.all('/api/expenses', (req, res) => require('./api/expenses.js')(req, res));
@@ -31,7 +37,6 @@ app.all('/api/habits/:id', (req, res) => {
 });
 app.all('/api/metadata', (req, res) => require('./api/metadata.js')(req, res));
 app.all('/api/mood', (req, res) => require('./api/mood.js')(req, res));
-app.post('/api/auth', (req, res) => require('./api/auth.js')(req, res));
 app.post('/api/attendance-upload', (req, res) => require('./api/attendance-upload.js')(req, res));
 
 // Attendance API (SQLite-backed)
@@ -45,11 +50,11 @@ app.put('/api/attendance/reset', (req, res) => require('./api/attendance.js')(re
 app.post('/api/attendance/restore', (req, res) => require('./api/attendance.js')(req, res));
 
 // Serve static frontend. Prefer `dist` (production build); fall back to `public` for local/dev.
-const staticDir = fs.existsSync(path.join(__dirname, 'dist'))
-  ? 'dist'
-  : fs.existsSync(path.join(__dirname, 'public'))
-    ? 'public'
-    : 'dist';
+const staticDir = fs.existsSync(path.join(__dirname, '../frontend/dist'))
+  ? '../frontend/dist'
+  : fs.existsSync(path.join(__dirname, '../frontend/public'))
+    ? '../frontend/public'
+    : '../frontend/dist';
 app.use(express.static(path.join(__dirname, staticDir)));
 
 // SPA fallback — serve index.html from the chosen static dir for all non-API routes
