@@ -356,7 +356,10 @@ export default function AttendancePage() {
 
   // ── Upload handler ──
   const handleFileUpload = useCallback(
-    async (file: File) => {
+    async (files: FileList | File[]) => {
+      const fileArray = Array.from(files);
+      if (!fileArray.length) return;
+      const file = fileArray[0]; // for extension check of first file
       const ext = file.name.split(".").pop()?.toLowerCase();
 
       if (ext === "csv" || ext === "txt") {
@@ -451,19 +454,19 @@ export default function AttendancePage() {
 
       // Image: use OCR (Tesseract.js)
       if (["png", "jpg", "jpeg", "webp"].includes(ext || "")) {
-        setUploadStatus({ message: "Preparing screenshot for OCR…", tone: "" });
+        setUploadStatus({ message: `Preparing ${fileArray.length} screenshot(s) for OCR…`, tone: "" });
 
         if (!(window as any).Tesseract) {
           // Load Tesseract dynamically
           setUploadStatus({ message: "Loading OCR engine…", tone: "" });
           const script = document.createElement("script");
           script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-          script.onload = () => runOCR(file);
+          script.onload = () => runOCR(fileArray);
           script.onerror = () => setUploadStatus({ message: "Failed to load OCR. Check internet.", tone: "bad" });
           document.head.appendChild(script);
           return;
         }
-        runOCR(file);
+        runOCR(fileArray);
         return;
       }
 
@@ -479,22 +482,27 @@ export default function AttendancePage() {
   );
 
   const runOCR = useCallback(
-    async (file: File) => {
-      if (file.size > 12 * 1024 * 1024) {
-        setUploadStatus({ message: "Image too large (>12MB).", tone: "bad" });
-        return;
-      }
+    async (files: File[]) => {
       setUploadStatus({ message: "Reading attendance table…", tone: "" });
       try {
-        const result = await (window as any).Tesseract.recognize(file, "eng", {
-          logger: (m: any) => {
-            if (m.status === "recognizing text") {
-              setUploadStatus({ message: `Reading… ${Math.round((m.progress || 0) * 100)}%`, tone: "" });
-            }
-          },
-        });
-        const lines: string[] = (result.data.lines || []).map((x: any) => x.text).filter(Boolean);
-        const source = lines.length ? lines : [result.data.text || ""];
+        let allLines: string[] = [];
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.size > 12 * 1024 * 1024) continue;
+          
+          const result = await (window as any).Tesseract.recognize(file, "eng", {
+            logger: (m: any) => {
+              if (m.status === "recognizing text") {
+                setUploadStatus({ message: `Reading image ${i + 1}/${files.length}… ${Math.round((m.progress || 0) * 100)}%`, tone: "" });
+              }
+            },
+          });
+          const lines: string[] = (result.data.lines || []).map((x: any) => x.text).filter(Boolean);
+          allLines = allLines.concat(lines.length ? lines : [result.data.text || ""]);
+        }
+        
+        const source = allLines;
         const updates: { i: number; values: BaseEntry }[] = [];
 
         ORIG_D.forEach((course, i) => {
@@ -909,9 +917,9 @@ export default function AttendancePage() {
             type="file"
             accept=".csv,.json,.txt,image/png,image/jpeg,image/webp"
             style={{ display: "none" }}
+            multiple
             onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleFileUpload(f);
+              if (e.target.files?.length) handleFileUpload(e.target.files);
               e.target.value = "";
             }}
             id="attendance-file-upload"
