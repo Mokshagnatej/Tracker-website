@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Attendance Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -45,6 +46,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--acc) 6%,transparent)}
 .pill{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;box-shadow:0 2px 6px -2px rgba(0,0,0,.35)}
 .note{font-size:13px;color:var(--muted);margin-top:8px}
 .sim{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:14px}
+.import{border:1px dashed color-mix(in srgb,var(--acc) 50%,var(--line));background:color-mix(in srgb,var(--acc) 5%,var(--card));padding:14px 16px;margin-bottom:14px}
+.import h2{margin-bottom:5px}.import input[type=file]{display:none}.import .upload{display:inline-flex;align-items:center;gap:7px;cursor:pointer}.import .upload .choose{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:9px;padding:8px 13px;font-size:14px;font-weight:600;transition:transform .15s,box-shadow .15s}.import .upload:hover .choose{transform:translateY(-1px);box-shadow:0 8px 18px -8px color-mix(in srgb,var(--acc) 70%,transparent)}.import .status{margin-top:9px;font-size:13px;color:var(--muted);min-height:18px}.import .status.bad{color:var(--bad)}.import .status.ok{color:var(--ok)}
 .mrow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 4px;border-bottom:1px solid var(--line);font-size:14px;border-radius:8px}
 .mrow:hover{background:color-mix(in srgb,var(--acc) 5%,transparent)}
 .mb{display:flex;gap:6px}
@@ -84,6 +87,13 @@ button:hover{transform:translateY(-1px);box-shadow:0 8px 18px -8px color-mix(in 
 <label>Required attendance % <input id="req" type="number" value="75" min="1" max="100"></label>
 <label>Chart metric
 <select id="metric"><option value="pp">My present % (in held classes)</option><option value="op">Overall % (of total planned)</option></select></label>
+</div>
+
+<div class="card import">
+<h2>📸 Update from college portal screenshot</h2>
+<div class="note" style="margin:0 0 10px">Upload a clear screenshot of the attendance table. Course totals, held sessions, present and absent values are read on this device and applied automatically.</div>
+<div class="tools" style="margin:0"><label class="upload"><span class="choose">Choose screenshot</span><input id="attendanceShot" type="file" accept="image/png,image/jpeg,image/webp"></label><label><input id="clearLogOnImport" type="checkbox" checked> Clear daily marks after import</label></div>
+<div id="importStatus" class="status" aria-live="polite"></div>
 </div>
 
 <div class="card" style="margin-bottom:14px">
@@ -259,6 +269,60 @@ async function restoreOnServer(baseData,logData){
   await apiCall('POST','/api/attendance/restore',{base,log});
 }
 
+// Screenshot import stays in the browser. Tesseract reads the visible table and
+// only accepts number groups that look like a valid attendance row.
+function importStatus(message, tone=""){
+ const el=$("importStatus");el.textContent=message;el.className="status "+tone;
+}
+function codePattern(code){return new RegExp(code.split("").map(c=>c+"\\s*").join(""),"i")}
+function valuesFromScreenshotRow(text, code, expectedTotal){
+ const withoutCode=text.replace(codePattern(code)," ");
+ const nums=(withoutCode.match(/\d+(?:[.,]\d+)?/g)||[]).map(v=>Number(v.replace(",","."))).filter(Number.isFinite);
+ const choices=[];
+ for(let n=0;n<=nums.length-4;n++){
+  const [total,held,present,absent]=nums.slice(n,n+4);
+  if(Number.isInteger(total)&&Number.isInteger(held)&&Number.isInteger(present)&&Number.isInteger(absent)&&total>0&&total<=1000&&held>=0&&held<=total&&present>=0&&present<=held&&absent>=0&&absent<=total){
+   choices.push({total,held,p:present,a:absent});
+  }
+ }
+ return choices.sort((a,b)=>Math.abs(a.total-expectedTotal)-Math.abs(b.total-expectedTotal))[0]||null;
+}
+async function importAttendanceScreenshot(file){
+ if(!window.Tesseract){importStatus("OCR could not load. Check your internet connection and try again.","bad");return}
+ if(file.size>12*1024*1024){importStatus("Please choose an image smaller than 12 MB.","bad");return}
+ importStatus("Preparing screenshot…");
+ let result;
+ try{
+  result=await Tesseract.recognize(file,"eng",{logger:m=>{
+   if(m.status==="recognizing text")importStatus("Reading attendance table… "+Math.round((m.progress||0)*100)+"%");
+  }});
+ }catch(error){console.error("[attendance OCR]",error);importStatus("Could not read that screenshot. Try a sharper, uncropped portal screenshot.","bad");return}
+ const lines=(result.data.lines||[]).map(x=>x.text).filter(Boolean);
+ const source=lines.length?lines:[result.data.text||""];
+ const updates=[];
+ D.forEach((course,i)=>{
+  const compact=course.code.toUpperCase();
+  const lineIndex=source.findIndex(line=>line.toUpperCase().replace(/[^A-Z0-9]/g,"").includes(compact));
+  if(lineIndex<0)return;
+  // Some portal layouts wrap a row, so include the next line only when needed.
+  const row=source.slice(lineIndex,lineIndex+2).join(" ");
+  const values=valuesFromScreenshotRow(row,course.code,ORIG[i].total);
+  if(values)updates.push({i,values});
+ });
+ if(!updates.length){importStatus("No course rows were recognized. Make sure the course codes and attendance numbers are visible.","bad");return}
+ try{localStorage.setItem("att_v2_before_screenshot_import",JSON.stringify({savedAt:new Date().toISOString(),base:BASE,log:LOG}))}catch(e){}
+ updates.forEach(({i,values})=>{BASE[i]=values});
+ const clearLog=$("clearLogOnImport").checked;
+ if(clearLog)LOG=[];
+ await saveBaseToServer();
+ if(clearLog)await clearLogOnServer();
+ recompute();all();
+ const missing=D.length-updates.length;
+ const note=missing?" "+missing+" course(s) were not visible and were left unchanged.":"";
+ importStatus("Updated "+updates.length+" course"+(updates.length===1?"":"s")+" from your screenshot."+(clearLog?" Daily marks were cleared to prevent double counting.":"")+note,"ok");
+ toast("📸 Attendance updated from screenshot");
+}
+
 function save(){saveLocal();} // kept for backward compat, server calls are explicit
 function recompute(){D.forEach((d,i)=>{const b=BASE[i];let p=b.p,a=b.a,h=b.held;LOG.forEach(l=>{if(l.i===i){const w=l.w||1;h+=w;l.s==="P"?p+=w:a+=w}});Object.assign(d,{total:b.total,p,a,held:h,pp:h?Math.round(p/h*100):0,op:b.total?Math.round(p/b.total*100):0})})}
 recompute();
@@ -266,6 +330,11 @@ recompute();
 const $=id=>document.getElementById(id);
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let charts=[],sortKey="pp",sortDir=1;
+$("attendanceShot").onchange=event=>{
+ const file=event.target.files&&event.target.files[0];
+ if(file)importAttendanceScreenshot(file);
+ event.target.value="";
+};
 const req=()=>+$("req").value||75;
 const col=v=>v>=req()?css("--ok"):v>=req()-10?css("--warn"):css("--bad");
 const short=d=>d.name.length>22?d.name.slice(0,21)+"…":d.name;
