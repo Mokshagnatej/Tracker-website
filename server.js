@@ -31,6 +31,8 @@ app.all('/api/habits/:id', (req, res) => {
 });
 app.all('/api/metadata', (req, res) => require('./api/metadata.js')(req, res));
 app.all('/api/mood', (req, res) => require('./api/mood.js')(req, res));
+app.post('/api/auth', (req, res) => require('./api/auth.js')(req, res));
+app.post('/api/attendance-upload', (req, res) => require('./api/attendance-upload.js')(req, res));
 
 // Attendance API (SQLite-backed)
 app.get('/api/attendance', (req, res) => require('./api/attendance.js')(req, res));
