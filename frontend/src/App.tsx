@@ -6,7 +6,6 @@ import HabitsPage from "./pages/HabitsPage";
 import AttendancePage from "./pages/AttendancePage";
 import ToastContainer, { ToastMessage } from "./components/Toast";
 import PullToRefresh from "./components/PullToRefresh";
-import AuthGate from "./components/AuthGate";
 import SettingsPage from "./pages/SettingsPage";
 
 type Page = "dashboard" | "entries" | "habits" | "attendance" | "settings";
@@ -211,7 +210,6 @@ export default function App() {
   const filteredTransactions = activeCat === "all" ? transactions : transactions.filter((t) => t.category === activeCat);
 
   return (
-    <AuthGate>
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-brand">
@@ -308,6 +306,5 @@ export default function App() {
 
       <ToastContainer messages={toasts} onRemove={removeToast} />
     </div>
-    </AuthGate>
   );
 }

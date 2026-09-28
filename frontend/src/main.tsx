@@ -5,8 +5,8 @@ import './index.css'
 
 const originalFetch = window.fetch;
 window.fetch = async (input, init) => {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-  if (url.startsWith('/api') && url !== '/api/auth') {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input?.url;
+  if (url && typeof url === 'string' && url.startsWith('/api') && url !== '/api/auth') {
     const token = localStorage.getItem('moksha_token');
     init = init || {};
     init.headers = {
@@ -22,8 +22,12 @@ window.fetch = async (input, init) => {
   return response;
 };
 
+import AuthGate from './components/AuthGate'
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <AuthGate>
+      <App />
+    </AuthGate>
   </React.StrictMode>,
 )
