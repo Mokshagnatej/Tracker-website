@@ -67,6 +67,8 @@ body {
 .main-area {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   padding: 2.25rem 2.5rem 4rem;
 }
 

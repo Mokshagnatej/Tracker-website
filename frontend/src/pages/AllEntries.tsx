@@ -49,7 +49,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
     return list;
   }, [transactions, filter, search, sortKey, sortDir]);
 
-  const totalIncome = useMemo(() => filtered.filter((t) => t.type === "Income" || t.type === "Add Cash").reduce((s, t) => s + t.amount, 0), [filtered]);
+  const totalIncome = useMemo(() => filtered.filter((t) => t.type === "Income").reduce((s, t) => s + t.amount, 0), [filtered]);
   const totalExpense = useMemo(() => filtered.filter((t) => t.type === "Expense").reduce((s, t) => s + t.amount, 0), [filtered]);
 
   const toggleSort = (key: SortKey) => {
@@ -60,7 +60,9 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !amount) return;
-    onAdd({ id: Date.now().toString(), name: name.trim(), amount: parseFloat(amount), type: txType, category: txType === "Add Cash" ? "Add Cash" : (category || "Other"), account: txType === "Add Cash" ? "Cash" : (account || "Cash"), date });
+    const finalType = txType === "Add Cash" ? (category || "Income") as TransactionType : txType;
+    const finalCat = txType === "Add Cash" ? "Cash Tx" : (category || "Other");
+    onAdd({ id: Date.now().toString(), name: name.trim(), amount: parseFloat(amount), type: finalType, category: finalCat, account: txType === "Add Cash" ? "Cash" : (account || "Cash"), date });
     showToast(`${txType} recorded`);
     setName(""); setAmount(""); setDate(todayStr()); setCategory(""); setAccount(""); setFormOpen(false);
   };
@@ -97,13 +99,23 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.65rem" }}>
               {txType === "Add Cash" ? (
                 <>
-                  <input className="input" value="Add Cash" disabled style={{ background: "var(--bg)", color: "var(--text-2)", opacity: 0.7, cursor: "not-allowed" }} />
+                  <select className="input" value={category} onChange={e=>setCategory(e.target.value)}>
+                    <option value="">Type…</option>
+                    <option value="Income">Income (Add Cash)</option>
+                    <option value="Expense">Expense (Pay with Cash)</option>
+                  </select>
                   <input className="input" value="Cash" disabled style={{ background: "var(--bg)", color: "var(--text-2)", opacity: 0.7, cursor: "not-allowed" }} />
                 </>
               ) : (
                 <>
-                  <select className="input" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Category…</option>{metadata ? metadata.categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>) : CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
-                  <select className="input" value={account} onChange={e=>setAccount(e.target.value)}><option value="">Account…</option>{metadata ? metadata.accounts.map(a=><option key={a.id} value={a.name}>{a.name}</option>) : ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}</select>
+                  <select className="input" value={category} onChange={e=>setCategory(e.target.value)}>
+                    <option value="">Category…</option>
+                    {metadata ? metadata.categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>) : CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select className="input" value={account} onChange={e=>setAccount(e.target.value)}>
+                    <option value="">Account…</option>
+                    {metadata ? metadata.accounts.map(a=><option key={a.id} value={a.name}>{a.name}</option>) : ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}
+                  </select>
                 </>
               )}
             </div>
@@ -152,7 +164,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
             </thead>
             <tbody>
               {filtered.map(t=>{
-                const isIncome=t.type==="Income"||t.type==="Add Cash";
+                const isIncome=t.type==="Income";
                 const color=CAT_COLOR[t.category]||"#94a3b8";
                 return (
                   <tr key={t.id}>

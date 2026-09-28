@@ -18,8 +18,12 @@ export default function PullToRefresh({ onRefresh, children }: Props) {
     if (!el) return;
 
     const onTouchStart = (e: TouchEvent) => {
+      // Find the closest scrollable container
+      const scrollParent = el.closest('.main-area') || window;
+      const scrollTop = scrollParent === window ? window.scrollY : (scrollParent as HTMLElement).scrollTop;
+      
       // Only allow pull-to-refresh if we are at the top of the page
-      if (window.scrollY === 0) {
+      if (scrollTop === 0) {
         startY.current = e.touches[0].clientY;
         pulling.current = true;
       }
@@ -31,8 +35,11 @@ export default function PullToRefresh({ onRefresh, children }: Props) {
       const y = e.touches[0].clientY;
       const dy = y - startY.current;
 
-      // Only care about pulling down
-      if (dy > 0 && window.scrollY === 0) {
+      const scrollParent = el.closest('.main-area') || window;
+      const scrollTop = scrollParent === window ? window.scrollY : (scrollParent as HTMLElement).scrollTop;
+
+      // Only care about pulling down when at the top
+      if (dy > 0 && scrollTop === 0) {
         // Prevent default scroll behavior while pulling down
         if (e.cancelable) e.preventDefault();
         
