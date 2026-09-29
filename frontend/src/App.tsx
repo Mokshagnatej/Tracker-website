@@ -96,6 +96,37 @@ export default function App() {
     } catch (e) { showToast('Failed to record expense', 'error'); }
   };
 
+  const addMetadata = async (type: 'category' | 'account', name: string): Promise<{id: string, name: string} | null> => {
+    try {
+      const res = await fetch('/api/metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, name })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const entry = { id: data.id, name: data.name };
+        setMetadata(prev => ({
+          categories: type === 'category' && !prev.categories.find(c => c.id === entry.id)
+            ? [...prev.categories, entry]
+            : prev.categories,
+          accounts: type === 'account' && !prev.accounts.find(a => a.id === entry.id)
+            ? [...prev.accounts, entry]
+            : prev.accounts,
+        }));
+        showToast(`${type === 'category' ? 'Category' : 'Account'} "${entry.name}" ${data.existed ? 'already exists' : 'added'}`, 'success');
+        return entry;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || `Failed to create ${type}`, 'error');
+        return null;
+      }
+    } catch (e) {
+      showToast(`Failed to create ${type}`, 'error');
+      return null;
+    }
+  };
+
   const deleteTransaction = async (id: string) => {
     try {
       const res = await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
@@ -275,7 +306,7 @@ export default function App() {
           ) : page === "dashboard" ? (
             <Dashboard transactions={filteredTransactions} catTotals={catTotals} catCounts={catCounts} />
           ) : page === "entries" ? (
-            <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} metadata={metadata} />
+            <AllEntries transactions={filteredTransactions} onAdd={addTransaction} onDelete={deleteTransaction} showToast={showToast} activeCat={activeCat} metadata={metadata} onAddMetadata={addMetadata} />
           ) : page === "attendance" ? (
             <AttendancePage />
           ) : page === "settings" ? (

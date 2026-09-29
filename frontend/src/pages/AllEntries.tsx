@@ -8,6 +8,7 @@ interface Props {
   showToast: (msg: string, type?: "success" | "error") => void;
   activeCat: string;
   metadata: { categories: {id:string, name:string}[], accounts: {id:string, name:string}[] } | null;
+  onAddMetadata: (type: 'category' | 'account', name: string) => Promise<{id: string, name: string} | null>;
 }
 
 const fmt = (n: number) =>
@@ -20,7 +21,7 @@ type Filter = "all" | "Income" | "Expense" | "Add Cash";
 type SortKey = "date" | "amount" | "name";
 type SortDir = "asc" | "desc";
 
-export default function AllEntries({ transactions, onAdd, onDelete, showToast, activeCat, metadata }: Props) {
+export default function AllEntries({ transactions, onAdd, onDelete, showToast, activeCat, metadata, onAddMetadata }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
@@ -32,6 +33,14 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
   const [category, setCategory] = useState("");
   const [account, setAccount] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+
+  // "Add new" inline states
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [addingCatLoading, setAddingCatLoading] = useState(false);
+  const [addingAccount, setAddingAccount] = useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+  const [addingAccLoading, setAddingAccLoading] = useState(false);
 
   const filtered = useMemo(() => {
     let list = transactions.filter((t) => filter === "all" || t.type === filter);
@@ -57,6 +66,52 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
     else { setSortKey(key); setSortDir("desc"); }
   };
 
+  const handleCategoryChange = (val: string) => {
+    if (val === "__add_new__") {
+      setAddingCategory(true);
+      setNewCategoryName("");
+      setCategory("");
+    } else {
+      setCategory(val);
+      setAddingCategory(false);
+    }
+  };
+
+  const handleAccountChange = (val: string) => {
+    if (val === "__add_new__") {
+      setAddingAccount(true);
+      setNewAccountName("");
+      setAccount("");
+    } else {
+      setAccount(val);
+      setAddingAccount(false);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    setAddingCatLoading(true);
+    const result = await onAddMetadata('category', newCategoryName.trim());
+    setAddingCatLoading(false);
+    if (result) {
+      setCategory(result.name);
+      setAddingCategory(false);
+      setNewCategoryName("");
+    }
+  };
+
+  const handleAddAccount = async () => {
+    if (!newAccountName.trim()) return;
+    setAddingAccLoading(true);
+    const result = await onAddMetadata('account', newAccountName.trim());
+    setAddingAccLoading(false);
+    if (result) {
+      setAccount(result.name);
+      setAddingAccount(false);
+      setNewAccountName("");
+    }
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !amount) return;
@@ -65,6 +120,7 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
     onAdd({ id: Date.now().toString(), name: name.trim(), amount: parseFloat(amount), type: finalType, category: finalCat, account: txType === "Add Cash" ? "Cash" : (account || "Cash"), date });
     showToast(`${txType} recorded`);
     setName(""); setAmount(""); setDate(todayStr()); setCategory(""); setAccount(""); setFormOpen(false);
+    setAddingCategory(false); setAddingAccount(false);
   };
 
   const SortIcon = ({ k }: { k: SortKey }) =>
@@ -108,14 +164,85 @@ export default function AllEntries({ transactions, onAdd, onDelete, showToast, a
                 </>
               ) : (
                 <>
-                  <select className="input" value={category} onChange={e=>setCategory(e.target.value)}>
-                    <option value="">Category…</option>
-                    {metadata ? metadata.categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>) : CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <select className="input" value={account} onChange={e=>setAccount(e.target.value)}>
-                    <option value="">Account…</option>
-                    {metadata ? metadata.accounts.map(a=><option key={a.id} value={a.name}>{a.name}</option>) : ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}
-                  </select>
+                  {/* Category selector with Add New */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    {addingCategory ? (
+                      <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
+                        <input
+                          className="input"
+                          placeholder="New category name…"
+                          value={newCategoryName}
+                          onChange={e => setNewCategoryName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCategory(); } if (e.key === 'Escape') setAddingCategory(false); }}
+                          autoFocus
+                          disabled={addingCatLoading}
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCategory}
+                          disabled={addingCatLoading || !newCategoryName.trim()}
+                          className="btn btn-primary"
+                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.75rem", whiteSpace: "nowrap", minWidth: "auto" }}
+                        >
+                          {addingCatLoading ? "…" : "Add"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAddingCategory(false)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", fontSize: "0.85rem", padding: "0.2rem" }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <select className="input" value={category} onChange={e => handleCategoryChange(e.target.value)}>
+                        <option value="">Category…</option>
+                        {metadata ? metadata.categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>) : CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+                        <option value="__add_new__">＋ Add new category…</option>
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Account selector with Add New */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    {addingAccount ? (
+                      <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
+                        <input
+                          className="input"
+                          placeholder="New account name…"
+                          value={newAccountName}
+                          onChange={e => setNewAccountName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddAccount(); } if (e.key === 'Escape') setAddingAccount(false); }}
+                          autoFocus
+                          disabled={addingAccLoading}
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddAccount}
+                          disabled={addingAccLoading || !newAccountName.trim()}
+                          className="btn btn-primary"
+                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.75rem", whiteSpace: "nowrap", minWidth: "auto" }}
+                        >
+                          {addingAccLoading ? "…" : "Add"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAddingAccount(false)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", fontSize: "0.85rem", padding: "0.2rem" }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <select className="input" value={account} onChange={e => handleAccountChange(e.target.value)}>
+                        <option value="">Account…</option>
+                        {metadata ? metadata.accounts.map(a=><option key={a.id} value={a.name}>{a.name}</option>) : ACCOUNTS.map(a=><option key={a} value={a}>{a}</option>)}
+                        <option value="__add_new__">＋ Add new account…</option>
+                      </select>
+                    )}
+                  </div>
                 </>
               )}
             </div>

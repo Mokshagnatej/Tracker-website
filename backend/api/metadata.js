@@ -1,5 +1,5 @@
 const { notion } = require('../lib/notion');
-const { getCache, setCache } = require('../lib/cache');
+const { getCache, setCache, invalidateCache } = require('../lib/cache');
 const { withRetry } = require('../lib/retry');
 const { rateLimit } = require('../lib/rate-limit');
 
@@ -49,5 +49,83 @@ module.exports = async function handler(req, res) {
             return res.status(500).json({ error: 'Failed to fetch metadata' });
         }
     }
+
+    if (req.method === 'POST') {
+        try {
+            const { type, name } = req.body || {};
+
+            if (!name || !name.trim()) {
+                return res.status(400).json({ error: 'Name is required' });
+            }
+
+            const trimmedName = name.trim();
+
+            if (type === 'category') {
+                if (!process.env.CATEGORY_DB_ID) {
+                    return res.status(400).json({ error: 'CATEGORY_DB_ID not configured' });
+                }
+
+                // Check if category already exists
+                const existing = await withRetry(() => notion.databases.query({
+                    database_id: process.env.CATEGORY_DB_ID,
+                    filter: { property: 'Name', title: { equals: trimmedName } }
+                }));
+
+                if (existing.results.length > 0) {
+                    return res.status(200).json({
+                        id: existing.results[0].id,
+                        name: trimmedName,
+                        existed: true
+                    });
+                }
+
+                const page = await withRetry(() => notion.pages.create({
+                    parent: { database_id: process.env.CATEGORY_DB_ID },
+                    properties: {
+                        Name: { title: [{ text: { content: trimmedName } }] }
+                    }
+                }));
+
+                invalidateCache('metadata_list');
+                return res.status(201).json({ id: page.id, name: trimmedName });
+
+            } else if (type === 'account') {
+                if (!process.env.ACCOUNT_DB_ID) {
+                    return res.status(400).json({ error: 'ACCOUNT_DB_ID not configured' });
+                }
+
+                // Check if account already exists
+                const existing = await withRetry(() => notion.databases.query({
+                    database_id: process.env.ACCOUNT_DB_ID,
+                    filter: { property: 'Name', title: { equals: trimmedName } }
+                }));
+
+                if (existing.results.length > 0) {
+                    return res.status(200).json({
+                        id: existing.results[0].id,
+                        name: trimmedName,
+                        existed: true
+                    });
+                }
+
+                const page = await withRetry(() => notion.pages.create({
+                    parent: { database_id: process.env.ACCOUNT_DB_ID },
+                    properties: {
+                        Name: { title: [{ text: { content: trimmedName } }] }
+                    }
+                }));
+
+                invalidateCache('metadata_list');
+                return res.status(201).json({ id: page.id, name: trimmedName });
+
+            } else {
+                return res.status(400).json({ error: 'Invalid type. Use "category" or "account".' });
+            }
+        } catch (error) {
+            console.error('Error creating metadata:', error);
+            return res.status(500).json({ error: 'Failed to create metadata entry' });
+        }
+    }
+
     return res.status(405).json({ error: 'Method Not Allowed' });
 };
