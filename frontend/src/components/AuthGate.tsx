@@ -16,10 +16,30 @@ export default function AuthGate({ children }: AuthGateProps) {
   useEffect(() => {
     const token = localStorage.getItem("moksha_token");
     if (token) {
-      setAuthenticated(true);
+      // Verify token is still valid by hitting a protected endpoint
+      fetch("/api/metadata", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          if (res.ok) {
+            setAuthenticated(true);
+          } else {
+            // Token is expired or invalid — clear it
+            localStorage.removeItem("moksha_token");
+          }
+        })
+        .catch(() => {
+          // Network error — keep token, let the user in (offline-friendly)
+          setAuthenticated(true);
+        })
+        .finally(() => {
+          setChecking(false);
+          setTimeout(() => inputRef.current?.focus(), 400);
+        });
+    } else {
+      setChecking(false);
+      setTimeout(() => inputRef.current?.focus(), 400);
     }
-    setChecking(false);
-    setTimeout(() => inputRef.current?.focus(), 400);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
