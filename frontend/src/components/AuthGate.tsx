@@ -38,8 +38,13 @@ export default function AuthGate({ children }: AuthGateProps) {
         const data = await res.json();
         localStorage.setItem("moksha_token", data.token);
         setAuthenticated(true);
-      } else {
+      } else if (res.status === 401) {
         setError("Wrong password. Try again.");
+        setShake(true);
+        setTimeout(() => setShake(false), 600);
+        setPassword("");
+      } else {
+        setError(`Server error (${res.status}). Is the backend running?`);
         setShake(true);
         setTimeout(() => setShake(false), 600);
         setPassword("");
