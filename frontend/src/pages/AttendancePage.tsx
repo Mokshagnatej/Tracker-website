@@ -45,16 +45,16 @@ interface UploadResult {
 
 /* ── Static data ── */
 const ORIG_D: CourseData[] = [
-  { code: "10210CH104", name: "Environmental Science & Sustainability", total: 45, held: 30, p: 21, a: 3, pp: 70, op: 47, fac: "Dr. Kanniraj A" },
-  { code: "10211CS129", name: "Modern Computer Architecture", total: 45, held: 31, p: 25, a: 6, pp: 81, op: 56, fac: "Dr. Barkathulla A. A" },
-  { code: "10211CS208", name: "Software Engineering", total: 60, held: 41, p: 31, a: 10, pp: 76, op: 52, fac: "Dr. Amu. D" },
-  { code: "10211CS223", name: "Machine Learning Techniques", total: 60, held: 43, p: 34, a: 8, pp: 79, op: 57, fac: "Dr. Godlin Jasil. S.P" },
-  { code: "10211CS227", name: "Problem Solving and Testing", total: 75, held: 56, p: 45, a: 10, pp: 80, op: 60, fac: "Dr. Sathyamoorthy. K" },
-  { code: "10212CS217", name: "Data Science", total: 60, held: 51, p: 45, a: 4, pp: 88, op: 75, fac: "Dr. Angeline Lydia" },
-  { code: "10212CS295", name: "Applied Coding Skills", total: 75, held: 51, p: 40, a: 10, pp: 78, op: 53, fac: "Dr. Kaviarasan. S" },
+  { code: "10210CH104", name: "Environmental Science & Sustainability", total: 45, held: 32, p: 23, a: 3, pp: 72, op: 51, fac: "Dr. Kanniraj A" },
+  { code: "10211CS129", name: "Modern Computer Architecture", total: 45, held: 33, p: 27, a: 6, pp: 82, op: 60, fac: "Dr. Barkathulla A. A" },
+  { code: "10211CS208", name: "Software Engineering", total: 60, held: 45, p: 35, a: 10, pp: 78, op: 58, fac: "Dr. Amu. D" },
+  { code: "10211CS223", name: "Machine Learning Techniques", total: 60, held: 48, p: 39, a: 8, pp: 81, op: 65, fac: "Dr. Godlin Jasil. S.P" },
+  { code: "10211CS227", name: "Problem Solving and Testing", total: 75, held: 64, p: 50, a: 13, pp: 78, op: 67, fac: "Dr. Sathyamoorthy. K" },
+  { code: "10212CS217", name: "Data Science", total: 60, held: 54, p: 48, a: 4, pp: 89, op: 80, fac: "Dr. Angeline Lydia" },
+  { code: "10212CS295", name: "Applied Coding Skills", total: 75, held: 57, p: 46, a: 10, pp: 81, op: 61, fac: "Dr. Kaviarasan. S" },
   { code: "10212CS461", name: "Design & Impl. of Human-Computer Interfaces", total: 12, held: 1, p: 1, a: 0, pp: 100, op: 8, fac: "Gopi. S" },
-  { code: "10213GE308", name: "Professional Communication for Engineers", total: 45, held: 30, p: 19, a: 4, pp: 63, op: 42, fac: "Dr. Umanesan. R" },
-  { code: "10216GE903", name: "Aptitude Skills - I", total: 30, held: 19, p: 15, a: 4, pp: 79, op: 50, fac: "Dinesh Kumar. R" },
+  { code: "10213GE308", name: "Professional Communication for Engineers", total: 45, held: 32, p: 21, a: 4, pp: 66, op: 47, fac: "Dr. Umanesan. R" },
+  { code: "10216GE903", name: "Aptitude Skills - I", total: 30, held: 21, p: 17, a: 4, pp: 81, op: 57, fac: "Dinesh Kumar. R" },
 ];
 
 const SCHED: SchedItem[] = [
