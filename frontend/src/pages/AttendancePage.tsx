@@ -512,14 +512,18 @@ export default function AttendancePage() {
           );
           if (lineIndex < 0) return;
           const row = source.slice(lineIndex, lineIndex + 2).join(" ");
-          const nums = (row.match(/\d+(?:[.,]\d+)?/g) || [])
+          // Strip the course code from the text before extracting numbers,
+          // so digits embedded in codes like "10212CS295" don't pollute results
+          const cleaned = row.replace(new RegExp(course.code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
+          const nums = (cleaned.match(/\d+(?:[.,]\d+)?/g) || [])
             .map((v: string) => Number(v.replace(",", ".")))
             .filter(Number.isFinite);
           for (let n = 0; n <= nums.length - 4; n++) {
             const [total, held, present, absent] = nums.slice(n, n + 4);
             if (
               Number.isInteger(total) && Number.isInteger(held) && Number.isInteger(present) && Number.isInteger(absent) &&
-              total > 0 && total <= 1000 && held >= 0 && held <= total && present >= 0 && present <= held && absent >= 0 && absent <= total
+              total > 0 && total <= 500 && held >= 0 && held <= total && present >= 0 && present <= held && absent >= 0 && absent <= held &&
+              (present + absent) <= held * 1.2 // sanity: p+a shouldn't wildly exceed held
             ) {
               updates.push({ i, values: { total, held, p: present, a: absent } });
               break;
