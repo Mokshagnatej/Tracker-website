@@ -481,20 +481,96 @@ export default function AttendancePage() {
     [base, log, clearLogOnImport, saveBaseToServer, saveLocal, toast]
   );
 
+  // ── OCR pending changes (for preview/confirmation) ──
+  const [ocrPending, setOcrPending] = useState<{
+    updates: { i: number; newVals: { total: number; held: number; p: number; a: number }; deltaHeld: number; deltaP: number; deltaA: number }[];
+    notFound: number;
+  } | null>(null);
+
+  // Apply confirmed OCR changes as daily log deltas
+  const applyOcrChanges = useCallback(async () => {
+    if (!ocrPending) return;
+    const dt = ymd(new Date()); // today's date for log entries
+    let newLog = [...log];
+    let appliedCount = 0;
+
+    for (const u of ocrPending.updates) {
+      const deltaHeld = u.deltaHeld;
+      const deltaP = u.deltaP;
+      const deltaA = u.deltaA;
+
+      // Only add a log entry if there's an actual change in held/present/absent
+      if (deltaHeld <= 0 && deltaP <= 0 && deltaA <= 0) continue;
+
+      // Remove any existing log entry for today for this course (to avoid duplicates)
+      newLog = newLog.filter((l) => !(l.d === dt && l.i === u.i));
+
+      // Determine status: if present increased, mark as Present; if absent increased, mark as Absent
+      if (deltaP > 0) {
+        newLog.push({ d: dt, i: u.i, s: "P", w: deltaP });
+        appliedCount++;
+      } else if (deltaA > 0) {
+        newLog.push({ d: dt, i: u.i, s: "A", w: deltaA });
+        appliedCount++;
+      }
+    }
+
+    // Also update base values for 'total' if it changed (total is planned hours, not daily)
+    const newBase = [...base];
+    let baseChanged = false;
+    for (const u of ocrPending.updates) {
+      if (u.newVals.total !== newBase[u.i].total) {
+        newBase[u.i] = { ...newBase[u.i], total: u.newVals.total };
+        baseChanged = true;
+      }
+    }
+
+    setLog(newLog);
+    if (baseChanged) {
+      setBase(newBase);
+      await saveBaseToServer(newBase);
+    }
+    saveLocal(baseChanged ? newBase : base, newLog);
+
+    // Sync log entries to server
+    const marks = ocrPending.updates
+      .filter((u) => u.deltaP > 0 || u.deltaA > 0)
+      .map((u) => ({
+        i: u.i,
+        s: u.deltaP > 0 ? "P" : "A",
+        w: u.deltaP > 0 ? u.deltaP : u.deltaA,
+      }));
+    if (marks.length) {
+      await apiCall("POST", "/api/attendance/log/bulk", { date: dt, marks });
+    }
+
+    setUploadStatus({
+      message: `✅ Applied ${appliedCount} change(s) as daily log entries for ${dt}.`,
+      tone: "ok",
+    });
+    toast("📸 Attendance synced from screenshot");
+    setOcrPending(null);
+  }, [ocrPending, base, log, saveBaseToServer, saveLocal, toast]);
+
+  const dismissOcrPending = useCallback(() => {
+    setOcrPending(null);
+    setUploadStatus({ message: "Screenshot import cancelled.", tone: "" });
+  }, []);
+
   const runOCR = useCallback(
     async (files: File[]) => {
       setUploadStatus({ message: "Reading attendance table…", tone: "" });
       try {
         let allLines: string[] = [];
         
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
+        for (let fi = 0; fi < files.length; fi++) {
+          const file = files[fi];
           if (file.size > 12 * 1024 * 1024) continue;
           
           const result = await (window as any).Tesseract.recognize(file, "eng", {
             logger: (m: any) => {
               if (m.status === "recognizing text") {
-                setUploadStatus({ message: `Reading image ${i + 1}/${files.length}… ${Math.round((m.progress || 0) * 100)}%`, tone: "" });
+                setUploadStatus({ message: `Reading image ${fi + 1}/${files.length}… ${Math.round((m.progress || 0) * 100)}%`, tone: "" });
               }
             },
           });
@@ -502,61 +578,164 @@ export default function AttendancePage() {
           allLines = allLines.concat(lines.length ? lines : [result.data.text || ""]);
         }
         
+        setUploadStatus({ message: "Matching courses and extracting numbers…", tone: "" });
         const source = allLines;
-        const updates: { i: number; values: BaseEntry }[] = [];
+        const parsed: { i: number; newVals: { total: number; held: number; p: number; a: number } }[] = [];
 
         ORIG_D.forEach((course, i) => {
-          const compact = course.code.toUpperCase();
-          const lineIndex = source.findIndex((line: string) =>
-            line.toUpperCase().replace(/[^A-Z0-9]/g, "").includes(compact)
+          // Try exact code match first, then fuzzy name match
+          const compactCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+          // Also prepare shorter fragments for fuzzy matching (OCR can merge/split chars)
+          const codeParts = course.code.match(/(\d+)([A-Z]+)(\d+)/i);
+          const shortName15 = course.name.toLowerCase().slice(0, 15);
+          
+          let lineIndex = -1;
+          
+          // Pass 1: exact code match
+          lineIndex = source.findIndex((line: string) =>
+            line.toUpperCase().replace(/[^A-Z0-9]/g, "").includes(compactCode)
           );
+          
+          // Pass 2: partial code match (last part of code, e.g., "CS208", "CH104")
+          if (lineIndex < 0 && codeParts) {
+            const suffix = (codeParts[2] + codeParts[3]).toUpperCase();
+            lineIndex = source.findIndex((line: string) =>
+              line.toUpperCase().replace(/[^A-Z0-9]/g, "").includes(suffix)
+            );
+          }
+          
+          // Pass 3: course name match
+          if (lineIndex < 0) {
+            lineIndex = source.findIndex((line: string) =>
+              line.toLowerCase().includes(shortName15)
+            );
+          }
+          
           if (lineIndex < 0) return;
-          const row = source.slice(lineIndex, lineIndex + 2).join(" ");
+          
+          // Grab the matched line + next line (table data can wrap)
+          const row = source.slice(lineIndex, Math.min(lineIndex + 3, source.length)).join(" ");
+          
           // Strip the course code from the text before extracting numbers,
           // so digits embedded in codes like "10212CS295" don't pollute results
-          const cleaned = row.replace(new RegExp(course.code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
-          const nums = (cleaned.match(/\d+(?:[.,]\d+)?/g) || [])
+          let cleaned = row;
+          // Remove all known course code patterns
+          cleaned = cleaned.replace(new RegExp(course.code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
+          // Also remove any 10-digit-style course codes (e.g., "10211CS208")
+          cleaned = cleaned.replace(/\b\d{5}[A-Z]{2}\d{3}\b/gi, ' ');
+          // Remove S.No column numbers at the start
+          cleaned = cleaned.replace(/^\s*\d{1,2}\s+/, ' ');
+          
+          // Extract all numbers
+          const rawNums = (cleaned.match(/\d+(?:[.,]\d+)?/g) || [])
             .map((v: string) => Number(v.replace(",", ".")))
             .filter(Number.isFinite);
-          for (let n = 0; n <= nums.length - 4; n++) {
-            const [total, held, present, absent] = nums.slice(n, n + 4);
+          
+          // The portal format is: total, held, present, absent, present%, overall%
+          // We need the first 4 integers that make sense as attendance counts (not percentages)
+          // Strategy: Try to find a valid [total, held, present, absent] window
+          // Percentages are typically 0-100 and can be identified by context
+          
+          // First, separate potential count numbers (> 0) from percentage-like numbers
+          // A percentage is typically followed by another percentage in this format
+          
+          for (let n = 0; n <= rawNums.length - 4; n++) {
+            const [total, held, present, absent] = rawNums.slice(n, n + 4);
+            
+            // Validate as attendance counts
             if (
-              Number.isInteger(total) && Number.isInteger(held) && Number.isInteger(present) && Number.isInteger(absent) &&
-              total > 0 && total <= 500 && held >= 0 && held <= total && present >= 0 && present <= held && absent >= 0 && absent <= held &&
-              (present + absent) <= held * 1.2 // sanity: p+a shouldn't wildly exceed held
-            ) {
-              updates.push({ i, values: { total, held, p: present, a: absent } });
+              !Number.isInteger(total) || !Number.isInteger(held) || 
+              !Number.isInteger(present) || !Number.isInteger(absent)
+            ) continue;
+            
+            // Basic range checks
+            if (total <= 0 || total > 500) continue;
+            if (held < 0 || held > total) continue;
+            if (present < 0 || present > held) continue;
+            if (absent < 0 || absent > held) continue;
+            
+            // present + absent should roughly equal held (± some tolerance for OCR errors)
+            // In real attendance: present + absent ≈ held (some may be "not recorded")
+            if ((present + absent) > held * 1.3) continue;
+            // At least: present + absent should be > 0 when held > 0
+            if (held > 0 && present + absent === 0) continue;
+            
+            // Check that the numbers look like attendance counts, not percentages
+            // If all 4 numbers are <= 100, check if they're likely percentages
+            // by seeing if the next 2 numbers exist and are also ≤100 (which would be %%s)
+            // Heuristic: total for a course is typically > 10 and held > a few
+            if (total <= 10 && held <= 10) continue;
+            
+            // Cross-validate: present % should roughly match present/held*100
+            // This helps disambiguate from percentage columns
+            const expectedPP = held > 0 ? Math.round((present / held) * 100) : 0;
+            
+            // Look if next 2 numbers after absent look like percentages 
+            // (this confirms we're reading counts not %%)
+            if (n + 5 < rawNums.length) {
+              const maybePresPercent = rawNums[n + 4];
+              // If the 5th number matches our computed present%, we've got the right window
+              if (Math.abs(maybePresPercent - expectedPP) <= 3) {
+                parsed.push({ i, newVals: { total, held, p: present, a: absent } });
+                break;
+              }
+            }
+            
+            // Even without the percentage verification, accept if numbers make solid sense
+            // (total > 10, and present + absent roughly = held)
+            if (total > 10 && held > 0 && Math.abs(present + absent - held) <= held * 0.3) {
+              parsed.push({ i, newVals: { total, held, p: present, a: absent } });
               break;
             }
           }
         });
 
-        if (!updates.length) {
-          setUploadStatus({ message: "No courses recognized. Use a clearer screenshot.", tone: "bad" });
+        if (!parsed.length) {
+          setUploadStatus({ message: "No courses recognized from screenshot. Tips: use a clearer screenshot, make sure course codes/names and numbers (Total, Held, Present, Absent) are visible.", tone: "bad" });
           return;
         }
 
-        const newBase = [...base];
-        updates.forEach(({ i, values }) => { newBase[i] = values; });
-        let newLog = log;
-        if (clearLogOnImport) newLog = [];
-        setBase(newBase);
-        setLog(newLog);
-        await saveBaseToServer(newBase);
-        if (clearLogOnImport) await apiCall("DELETE", "/api/attendance/log/clear");
+        // Compute the DELTA between new screenshot values and current effective values
+        const updates = parsed.map(({ i, newVals }) => {
+          // Current effective values = base + all log entries
+          const curBase = base[i];
+          let curHeld = curBase.held;
+          let curP = curBase.p;
+          let curA = curBase.a;
+          log.forEach((l) => {
+            if (l.i === i) {
+              const w = l.w || 1;
+              curHeld += w;
+              l.s === "P" ? (curP += w) : (curA += w);
+            }
+          });
 
-        const missing = ORIG_D.length - updates.length;
+          const deltaHeld = newVals.held - curHeld;
+          const deltaP = newVals.p - curP;
+          const deltaA = newVals.a - curA;
+
+          return { i, newVals, deltaHeld, deltaP, deltaA };
+        });
+
+        // Show the preview for user confirmation
+        const changesExist = updates.some((u) => u.deltaHeld !== 0 || u.deltaP !== 0 || u.deltaA !== 0);
+        
+        if (!changesExist) {
+          setUploadStatus({ message: `Read ${parsed.length} course(s) — all values match your stored data. No changes needed! ✅`, tone: "ok" });
+          return;
+        }
+
+        setOcrPending({ updates, notFound: ORIG_D.length - parsed.length });
         setUploadStatus({
-          message: `Updated ${updates.length} course(s).${missing ? ` ${missing} not found.` : ""}${clearLogOnImport ? " Daily marks cleared." : ""}`,
+          message: `Found ${parsed.length} course(s). Review the changes below and confirm.`,
           tone: "ok",
         });
-        toast("📸 Attendance updated from screenshot");
       } catch (err) {
         console.error("[OCR]", err);
         setUploadStatus({ message: "OCR failed. Try a sharper image.", tone: "bad" });
       }
     },
-    [base, log, clearLogOnImport, saveBaseToServer, toast]
+    [base, log]
   );
 
   // ── Stats ──
@@ -909,8 +1088,8 @@ export default function AttendancePage() {
       <div className="att-card att-import">
         <h2 className="att-h2">📤 Upload Attendance Report</h2>
         <p className="att-note" style={{ margin: "0 0 12px" }}>
-          Upload a <strong>CSV</strong>, <strong>screenshot/image</strong>, or <strong>JSON backup</strong>. The format is auto-detected.
-          CSV should have columns: course code/name, total, held, present, absent.
+          Upload a <strong>screenshot</strong> from your college portal — it auto-detects courses, cross-checks with stored values,
+          and adds only the <strong>differences</strong> as daily log entries. Also supports <strong>CSV</strong> and <strong>JSON backup</strong>.
         </p>
         <div className="att-tools" style={{ margin: 0 }}>
           <label className="att-upload-btn" onClick={() => fileRef.current?.click()}>
@@ -930,11 +1109,86 @@ export default function AttendancePage() {
           />
           <label className="att-check-label">
             <input type="checkbox" checked={clearLogOnImport} onChange={(e) => setClearLogOnImport(e.target.checked)} />
-            Clear daily marks after import
+            Clear daily marks after CSV import
           </label>
         </div>
         {uploadStatus.message && (
           <div className={`att-upload-status ${uploadStatus.tone}`}>{uploadStatus.message}</div>
+        )}
+
+        {/* OCR Delta Preview */}
+        {ocrPending && (
+          <div className="att-ocr-preview">
+            <h3 className="att-h3" style={{ marginTop: 12 }}>📋 Detected changes — review before applying</h3>
+            <p className="att-note" style={{ margin: "4px 0 8px" }}>
+              The screenshot values are compared to your current data (base + daily log). Only differences will be added as today's log entries.
+              {ocrPending.notFound > 0 && <span style={{ color: "#f59e0b" }}> {ocrPending.notFound} course(s) were not found in the screenshot.</span>}
+            </p>
+            <div className="att-table-wrap">
+              <table className="att-table">
+                <thead>
+                  <tr>
+                    <th>Course</th>
+                    <th>Stored (Held)</th>
+                    <th>Screenshot (Held)</th>
+                    <th>Δ Held</th>
+                    <th>Stored (P)</th>
+                    <th>Screenshot (P)</th>
+                    <th>Δ Present</th>
+                    <th>Stored (A)</th>
+                    <th>Screenshot (A)</th>
+                    <th>Δ Absent</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ocrPending.updates.map((u) => {
+                    const curBase = base[u.i];
+                    let curHeld = curBase.held, curP = curBase.p, curA = curBase.a;
+                    log.forEach((l) => { if (l.i === u.i) { const w = l.w || 1; curHeld += w; l.s === "P" ? (curP += w) : (curA += w); } });
+                    const hasChange = u.deltaHeld !== 0 || u.deltaP !== 0 || u.deltaA !== 0;
+                    return (
+                      <tr key={u.i} style={{ opacity: hasChange ? 1 : 0.5 }}>
+                        <td className="att-td-name">{shortName(ORIG_D[u.i].name)}</td>
+                        <td>{curHeld}</td>
+                        <td><b>{u.newVals.held}</b></td>
+                        <td style={{ color: u.deltaHeld > 0 ? "#16a34a" : u.deltaHeld < 0 ? "#dc2626" : "inherit", fontWeight: 700 }}>
+                          {u.deltaHeld > 0 ? "+" : ""}{u.deltaHeld}
+                        </td>
+                        <td>{curP}</td>
+                        <td><b>{u.newVals.p}</b></td>
+                        <td style={{ color: u.deltaP > 0 ? "#16a34a" : u.deltaP < 0 ? "#dc2626" : "inherit", fontWeight: 700 }}>
+                          {u.deltaP > 0 ? "+" : ""}{u.deltaP}
+                        </td>
+                        <td>{curA}</td>
+                        <td><b>{u.newVals.a}</b></td>
+                        <td style={{ color: u.deltaA > 0 ? "#f59e0b" : u.deltaA < 0 ? "#dc2626" : "inherit", fontWeight: 700 }}>
+                          {u.deltaA > 0 ? "+" : ""}{u.deltaA}
+                        </td>
+                        <td>
+                          {hasChange ? (
+                            <span className="att-pill" style={{ background: u.deltaP > 0 ? "#16a34a" : "#dc2626" }}>
+                              {u.deltaP > 0 ? `+${u.deltaP} Present` : u.deltaA > 0 ? `+${u.deltaA} Absent` : "Updated"}
+                            </span>
+                          ) : (
+                            <span className="att-pill" style={{ background: "#64748b" }}>No change</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="att-tools" style={{ marginTop: 12, justifyContent: "flex-start", gap: 10 }}>
+              <button className="att-btn" onClick={applyOcrChanges}>
+                ✅ Confirm & apply changes
+              </button>
+              <button className="att-btn-sec" onClick={dismissOcrPending}>
+                ✕ Cancel
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

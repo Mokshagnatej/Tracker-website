@@ -1004,6 +1004,19 @@ body {
 .att-upload-status.bad { color: #dc2626; }
 .att-upload-status.ok { color: #16a34a; }
 
+.att-ocr-preview {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: rgba(37, 99, 235, 0.04);
+  border: 1.5px solid rgba(37, 99, 235, 0.18);
+}
+
+.dark .att-ocr-preview {
+  background: rgba(96, 165, 250, 0.06);
+  border-color: rgba(96, 165, 250, 0.15);
+}
+
 /* Mark list */
 .att-mark-list {
   display: flex;
